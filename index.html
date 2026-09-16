@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppSheet QA Advanced Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 950: '#090d16', 900: '#0f172a', 800: '#1e293b', 700: '#334155' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .dark ::-webkit-scrollbar-track { background: #090d16; }
+        .dark ::-webkit-scrollbar-thumb { background: #1e293b; }
+        
+        #sidebar { 
+            width: 280px;
+            min-width: 280px;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        #sidebar.collapsed {
+            width: 80px !important;
+            min-width: 80px !important;
+        }
+        #sidebar.collapsed .sidebar-text {
+            display: none !important;
+        }
+        #sidebar.collapsed #sidebar-brand-box {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+        #sidebar.collapsed nav button {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 dark:bg-dark-950 dark:text-slate-100 h-screen overflow-hidden flex flex-col antialiased transition-colors duration-300">
+
+    <!-- Top Loading Progress Bar -->
+    <div id="progress-container" class="fixed top-0 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-900 z-50 overflow-hidden">
+        <div id="progress-bar" class="h-full bg-blue-600 transition-all duration-300 w-0"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="flex h-full w-full overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between p-4 z-20 h-full overflow-hidden shadow-2xl">
+            <div class="space-y-6">
+                <!-- Brand Header -->
+                <div class="flex items-center gap-3 px-1 transition-all duration-300" id="sidebar-brand-box">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-black text-lg flex-shrink-0">
+                        QA
+                    </div>
+                    <div class="sidebar-text whitespace-nowrap overflow-hidden transition-all duration-300">
+                        <h1 class="font-extrabold text-sm tracking-tight">AppSheet QA</h1>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Enterprise Control Hub</p>
+                    </div>
+                </div>
+
+                <!-- Nav Links -->
+                <nav class="space-y-2">
+                    <button onclick="switchPage('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                        <span class="sidebar-text whitespace-nowrap overflow-hidden">Overview Dashboard</span>
+                    </button>
+                    <button onclick="switchPage('main')" id="nav-main" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span class="sidebar-text whitespace-nowrap overflow-hidden">Data Records Explorer</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="space-y-3 overflow-hidden bg-slate-50 dark:bg-dark-950/50 p-3 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 sidebar-text">
+                <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-bold">
+                    <span id="progress-text">System Ready</span>
+                    <span id="progress-percent" class="text-blue-500">100%</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100/70 dark:bg-dark-950 transition-colors duration-300 relative">
+            
+            <!-- Top Navbar -->
+            <header class="h-20 min-h-[80px] border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-dark-900/40 backdrop-blur-xl px-6 flex items-center justify-between z-10 transition-colors duration-300 gap-4 shadow-sm">
+                
+                <div class="flex items-center gap-3 flex-wrap">
+                    <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 transition-all shadow-sm flex-shrink-0" title="Toggle Sidebar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+
+                    <!-- Quick Date Presets -->
+                    <div class="flex items-center bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-700/80 p-1 rounded-xl shadow-sm gap-1">
+                        <button onclick="setDatePreset('all')" id="preset-all" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white">All</button>
+                        <button onclick="setDatePreset('weekly')" id="preset-weekly" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Weekly</button>
+                        <button onclick="setDatePreset('monthly')" id="preset-monthly" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Monthly</button>
+                        <button onclick="setDatePreset('yearly')" id="preset-yearly" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Yearly</button>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <input type="text" id="search-input" placeholder="Search database..." class="bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 px-4 py-2.5 pl-9 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm w-40">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+
+                    <!-- Task Dropdown Filter -->
+                    <div class="relative">
+                        <button id="task-btn" class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 transition-all shadow-sm">
+                            <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            <span id="task-label">Tasks</span>
+                            <svg class="w-3 h-3 ml-1 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="task-menu" class="hidden absolute left-0 mt-2 w-64 bg-white dark:bg-dark-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-3 z-50 space-y-1.5 max-h-60 overflow-y-auto"></div>
+                    </div>
+
+                    <!-- User Filter Select -->
+                    <div class="relative">
+                        <select id="user-filter-select" class="appearance-none bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 px-3.5 py-2.5 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm cursor-pointer">
+                            <option value="">All Users</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+
+                    <!-- Custom Date Range -->
+                    <div class="flex items-center gap-1.5 bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-700/80 px-3 py-1.5 rounded-xl text-xs shadow-sm">
+                        <input type="date" id="start-date-input" class="bg-transparent text-slate-700 dark:text-slate-200 font-semibold focus:outline-none cursor-pointer" title="Start Date">
+                        <span class="text-slate-400 font-bold">-</span>
+                        <input type="date" id="end-date-input" class="bg-transparent text-slate-700 dark:text-slate-200 font-semibold focus:outline-none cursor-pointer" title="End Date">
+                    </div>
+
+                    <button id="reset-btn" class="px-3 py-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-rose-500/10 hover:text-rose-500 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all shadow-sm">Reset</button>
+                </div>
+
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-yellow-400 transition-all shadow-sm" title="Toggle Theme">
+                        <svg id="theme-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    </button>
+                    <button onclick="exportCSV()" class="px-3.5 py-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all shadow-sm">CSV</button>
+                    <button onclick="exportExcel()" class="px-3.5 py-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all shadow-sm">Excel</button>
+                    <button onclick="exportPDF()" class="px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white shadow-lg shadow-blue-500/20 transition-all">Print / PDF</button>
+                </div>
+            </header>
+
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                
+                <!-- PAGE 1: DASHBOARD -->
+                <div id="page-dashboard" class="space-y-6">
+                    
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Rows</span>
+                            <div class="flex items-baseline justify-between mt-3">
+                                <span id="stat-total" class="text-2xl font-black text-slate-900 dark:text-white">0</span>
+                                <span class="text-[9px] font-extrabold bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-lg">Database</span>
+                            </div>
+                        </div>
+                        <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Daily</span>
+                            <div class="flex items-baseline justify-between mt-3">
+                                <span id="stat-daily" class="text-2xl font-black text-emerald-500">0</span>
+                                <span class="text-[9px] font-extrabold bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-lg">Today</span>
+                            </div>
+                        </div>
+                        <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Weekly</span>
+                            <div class="flex items-baseline justify-between mt-3">
+                                <span id="stat-weekly" class="text-2xl font-black text-purple-500">0</span>
+                                <span class="text-[9px] font-extrabold bg-purple-500/10 text-purple-500 px-2 py-0.5 rounded-lg">7 Days</span>
+                            </div>
+                        </div>
+                        <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Monthly</span>
+                            <div class="flex items-baseline justify-between mt-3">
+                                <span id="stat-monthly" class="text-2xl font-black text-indigo-500">0</span>
+                                <span class="text-[9px] font-extrabold bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded-lg">Month</span>
+                            </div>
+                        </div>
+                        <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Yearly</span>
+                            <div class="flex items-baseline justify-between mt-3">
+                                <span id="stat-yearly" class="text-2xl font-black text-amber-500">0</span>
+                                <span class="text-[9px] font-extrabold bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-lg">Year</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LEADERBOARD -->
+                    <div class="glass-card rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-slate-800/80">
+                        <div class="p-6 border-b border-slate-200/60 dark:border-slate-800/60 flex justify-between items-center bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-white shadow-lg shadow-amber-500/30">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-white">Leaderboard</h3>
+                                </div>
+                            </div>
+                            <span class="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-extrabold px-3 py-1.5 rounded-xl border border-blue-500/20 shadow-sm">Live Ranking</span>
+                        </div>
+                        <div class="p-6">
+                            <div id="leaderboard-container" class="space-y-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- Line Charts Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="glass-card p-6 rounded-3xl shadow-xl flex flex-col">
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">Yearly Line Analytics</h3>
+                            <div class="h-64 relative flex-1"><canvas id="yearlyChart"></canvas></div>
+                        </div>
+                        <div class="glass-card p-6 rounded-3xl shadow-xl flex flex-col">
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">Monthly Line Analytics</h3>
+                            <div class="h-64 relative flex-1"><canvas id="monthlyChart"></canvas></div>
+                        </div>
+                        <div class="glass-card p-6 rounded-3xl shadow-xl flex flex-col">
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">Weekly Line Analytics</h3>
+                            <div class="h-64 relative flex-1"><canvas id="weeklyChart"></canvas></div>
+                        </div>
+                        <div class="glass-card p-6 rounded-3xl shadow-xl flex flex-col">
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">Tasks Distribution Line Chart</h3>
+                            <div class="h-64 relative flex-1"><canvas id="taskChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Today's Activity Table -->
+                    <div class="glass-card rounded-3xl shadow-xl overflow-hidden">
+                        <div class="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex justify-between items-center">
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Today's Activity Breakdown</h3>
+                            <span id="today-count-badge" class="bg-emerald-500/10 text-emerald-500 text-xs font-extrabold px-3 py-1 rounded-xl border border-emerald-500/20">0 Cases Today</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead id="today-table-head" class="bg-slate-50/50 dark:bg-dark-950/50 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider border-b border-slate-200/60 dark:border-slate-800/60 cursor-pointer select-none">
+                                    <tr>
+                                        <th class="p-4">#</th>
+                                        <th class="p-4 hover:text-blue-500 transition-colors" onclick="sortTodayTable('user')">User Name</th>
+                                        <th class="p-4 hover:text-blue-500 transition-colors" onclick="sortTodayTable('task')">Task Name</th>
+                                        <th class="p-4 text-right hover:text-blue-500 transition-colors" onclick="sortTodayTable('count')">Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="today-activity-body" class="divide-y divide-slate-100 dark:divide-slate-800/40"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAGE 2: DATA EXPLORER -->
+                <div id="page-main" class="hidden space-y-6">
+                    <div class="glass-card rounded-3xl shadow-xl overflow-hidden">
+                        <div class="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex justify-between items-center">
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">DATASET RECORDS EXPLORER (CLICK HEADER TO SORT)</h3>
+                        </div>
+                        <div class="overflow-x-auto max-h-[600px]">
+                            <table class="w-full text-left text-xs">
+                                <thead id="table-head" class="bg-slate-50/70 dark:bg-dark-950/70 sticky top-0 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider border-b border-slate-200/60 dark:border-slate-800/60 z-10 select-none"></thead>
+                                <tbody id="table-body" class="divide-y divide-slate-100 dark:divide-slate-800/40"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Status Badge -->
+    <div id="status-el" class="fixed bottom-4 right-4 z-50 text-xs bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-slate-700 dark:text-slate-200 px-4 py-3 rounded-2xl font-bold border border-slate-200/80 dark:border-slate-800 shadow-2xl flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> Connecting to server...
+    </div>
+
+    <!-- Core Script -->
+    <script>
+        const targetUrl = 'https://script.google.com/macros/s/AKfycbwE82we6wD_3-1Fzo1otxxBIUyp0K6LwvdfK-E_qzR8tC4McmvtgKjm6d82SBiMoZFK/exec';
+
+        let rawData = [];
+        let filteredData = [];
+        let headers = [];
+        let uniqueTasks = new Set();
+        let uniqueUsers = new Set();
+        
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+        let columnFilters = {}; // Stores search inputs for each column
+
+        let todaySortColumn = null;
+        let todaySortDirection = 'asc';
+
+        let yearlyChartInstance = null;
+        let monthlyChartInstance = null;
+        let weeklyChartInstance = null;
+        let taskChartInstance = null;
+
+        const statusEl = document.getElementById('status-el');
+        const taskBtn = document.getElementById('task-btn');
+        const taskMenu = document.getElementById('task-menu');
+        const taskLabel = document.getElementById('task-label');
+        const userFilterSelect = document.getElementById('user-filter-select');
+        const startDateInput = document.getElementById('start-date-input');
+        const endDateInput = document.getElementById('end-date-input');
+        const searchInput = document.getElementById('search-input');
+        const resetBtn = document.getElementById('reset-btn');
+        const sidebar = document.getElementById('sidebar');
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            renderCharts(filteredData);
+        }
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('collapsed');
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progress-bar').style.width = percent + '%';
+            document.getElementById('progress-percent').innerText = percent + '%';
+            document.getElementById('progress-text').innerText = text;
+        }
+
+        function formatText(text) {
+            if (!text) return '';
+            return text.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function parseCustomDate(val) {
+            if (!val) return null;
+            let d = new Date(val);
+            return !isNaN(d.getTime()) ? d : null;
+        }
+
+        function switchPage(page) {
+            const dashboardPage = document.getElementById('page-dashboard');
+            const mainPage = document.getElementById('page-main');
+            const navDashboard = document.getElementById('nav-dashboard');
+            const navMain = document.getElementById('nav-main');
+
+            if (page === 'dashboard') {
+                dashboardPage.classList.remove('hidden');
+                mainPage.classList.add('hidden');
+                navDashboard.className = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25";
+                navMain.className = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60";
+            } else {
+                dashboardPage.classList.add('hidden');
+                mainPage.classList.remove('hidden');
+                navMain.className = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25";
+                navDashboard.className = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60";
+            }
+        }
+
+        taskBtn.addEventListener('click', () => taskMenu.classList.toggle('hidden'));
+        document.addEventListener('click', (e) => {
+            if (!taskBtn.contains(e.target) && !taskMenu.contains(e.target)) taskMenu.classList.add('hidden');
+        });
+
+        function setDatePreset(preset) {
+            ['all', 'weekly', 'monthly', 'yearly'].forEach(p => {
+                let btn = document.getElementById('preset-' + p);
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
+            });
+            document.getElementById('preset-' + preset).className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white";
+
+            let now = new Date();
+            if (preset === 'all') {
+                startDateInput.value = '';
+                endDateInput.value = '';
+            } else if (preset === 'weekly') {
+                let past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                startDateInput.value = past.toISOString().split('T')[0];
+                endDateInput.value = now.toISOString().split('T')[0];
+            } else if (preset === 'monthly') {
+                let past = new Date(now.getFullYear(), now.getMonth(), 1);
+                startDateInput.value = past.toISOString().split('T')[0];
+                endDateInput.value = now.toISOString().split('T')[0];
+            } else if (preset === 'yearly') {
+                let past = new Date(now.getFullYear(), 0, 1);
+                startDateInput.value = past.toISOString().split('T')[0];
+                endDateInput.value = now.toISOString().split('T')[0];
+            }
+            filterAndRender();
+        }
+
+        updateProgress(40, "Fetching data...");
+
+        fetch(targetUrl)
+            .then(response => response.text())
+            .then(textData => {
+                updateProgress(80, "Processing dataset...");
+                let parsed;
+                try {
+                    let jsonData = JSON.parse(textData);
+                    parsed = { data: Array.isArray(jsonData) ? jsonData : (jsonData.data || []) };
+                } catch (e) {
+                    parsed = Papa.parse(textData, { header: true, skipEmptyLines: true });
+                }
+
+                const data = parsed.data;
+                updateProgress(100, "Completed");
+
+                if (!data || data.length === 0) {
+                    statusEl.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> No records found!`;
+                    return;
+                }
+
+                statusEl.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Loaded (${data.length} rows)`;
+                statusEl.className = "fixed bottom-4 right-4 z-50 text-xs bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-2xl font-bold border border-emerald-500/20 shadow-2xl flex items-center gap-2.5";
+
+                rawData = data;
+                headers = Object.keys(rawData[0]).slice(0, 6);
+                extractFilters();
+                filteredData = rawData;
+                updateAll(filteredData);
+            })
+            .catch(err => {
+                updateProgress(100, "Failed");
+                statusEl.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Connection error!`;
+                console.error(err);
+            });
+
+        function extractFilters() {
+            let taskKey = headers.length > 1 ? headers[1] : headers[0];
+            let userKey = headers.find(h => h.toLowerCase().includes('name') || h.toLowerCase().includes('user')) || headers[0];
+
+            rawData.forEach(row => {
+                if (row[taskKey]) uniqueTasks.add(row[taskKey].toString().trim());
+                if (row[userKey]) uniqueUsers.add(row[userKey].toString().trim());
+            });
+
+            taskMenu.innerHTML = '';
+            uniqueTasks.forEach(task => {
+                const div = document.createElement('label');
+                div.className = "flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 p-2 rounded-xl transition-all";
+                div.innerHTML = `<input type="checkbox" value="${task}" class="task-checkbox rounded-lg border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"> ${formatText(task)}`;
+                taskMenu.appendChild(div);
+            });
+            document.querySelectorAll('.task-checkbox').forEach(cb => cb.addEventListener('change', filterAndRender));
+
+            userFilterSelect.innerHTML = `<option value="">All Users</option>`;
+            uniqueUsers.forEach(user => {
+                const opt = document.createElement('option');
+                opt.value = user;
+                opt.textContent = formatText(user);
+                userFilterSelect.appendChild(opt);
+            });
+            userFilterSelect.addEventListener('change', filterAndRender);
+            startDateInput.addEventListener('change', () => { uncheckPresets(); filterAndRender(); });
+            endDateInput.addEventListener('change', () => { uncheckPresets(); filterAndRender(); });
+            searchInput.addEventListener('input', filterAndRender);
+            resetBtn.addEventListener('click', resetFilters);
+        }
+
+        function uncheckPresets() {
+            ['all', 'weekly', 'monthly', 'yearly'].forEach(p => {
+                let btn = document.getElementById('preset-' + p);
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
+            });
+        }
+
+        function filterAndRender() {
+            let selectedUser = userFilterSelect.value;
+            let startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+            let endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+            if (endDate) endDate.setHours(23, 59, 59, 999);
+            let searchText = searchInput.value.toLowerCase().trim();
+
+            let selectedTasks = Array.from(document.querySelectorAll('.task-checkbox:checked')).map(cb => cb.value);
+            taskLabel.innerText = selectedTasks.length > 0 ? selectedTasks.length + " Tasks" : "Tasks";
+
+            let userKey = headers.find(h => h.toLowerCase().includes('name') || h.toLowerCase().includes('user')) || headers[0];
+            let taskKey = headers.length > 1 ? headers[1] : headers[0];
+
+            filteredData = rawData.filter(row => {
+                let matchUser = !selectedUser || (row[userKey] && row[userKey].toString().trim() === selectedUser);
+                let matchTask = selectedTasks.length === 0 || (row[taskKey] && selectedTasks.includes(row[taskKey].toString().trim()));
+                let matchSearch = !searchText || Object.values(row).some(val => val && val.toString().toLowerCase().includes(searchText));
+                
+                // Column-specific searches (Smart Prefix Matching: starts with input value)
+                let matchColumnFilters = true;
+                for (let col in columnFilters) {
+                    let colVal = columnFilters[col];
+                    if (colVal && colVal.trim() !== '') {
+                        let cellData = row[col] !== undefined && row[col] !== null ? row[col].toString().toLowerCase() : '';
+                        let query = colVal.toLowerCase().trim();
+                        if (!cellData.startsWith(query)) {
+                            matchColumnFilters = false;
+                            break;
+                        }
+                    }
+                }
+
+                let matchDate = true;
+                if (startDate || endDate) {
+                    let hasDateMatch = false;
+                    Object.values(row).forEach(val => {
+                        let d = parseCustomDate(val);
+                        if (d && (!startDate || d >= startDate) && (!endDate || d <= endDate)) {
+                            hasDateMatch = true;
+                        }
+                    });
+                    matchDate = hasDateMatch;
+                }
+                return matchUser && matchTask && matchSearch && matchColumnFilters && matchDate;
+            });
+
+            updateAll(filteredData);
+        }
+
+        function resetFilters() {
+            userFilterSelect.value = '';
+            startDateInput.value = '';
+            endDateInput.value = '';
+            searchInput.value = '';
+            columnFilters = {};
+            document.querySelectorAll('.column-search-input').forEach(inp => inp.value = '');
+            document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = false);
+            taskLabel.innerText = "Tasks";
+            setDatePreset('all');
+            filteredData = rawData;
+            currentSortColumn = null;
+            todaySortColumn = null;
+            updateAll(filteredData);
+        }
+
+        function sortTable(column) {
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+            updateAll(filteredData);
+        }
+
+        function sortTodayTable(column) {
+            if (todaySortColumn === column) {
+                todaySortDirection = todaySortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                todaySortColumn = column;
+                todaySortDirection = 'asc';
+            }
+            renderTableAndCards(filteredData);
+        }
+
+        function updateAll(data) {
+            if (currentSortColumn) {
+                filteredData.sort((a, b) => {
+                    let valA = a[currentSortColumn] !== undefined ? a[currentSortColumn] : '';
+                    let valB = b[currentSortColumn] !== undefined ? b[currentSortColumn] : '';
+                    if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
+                    if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+            renderTableAndCards(data);
+            renderCharts(data);
+        }
+
+        function renderCharts(data) {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? '#1e293b' : '#e2e8f0';
+
+            let yearlyCount = 0, monthlyCount = 0, weeklyCount = 0;
+            let taskCounts = {};
+            const now = new Date();
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            let taskKey = headers.length > 1 ? headers[1] : headers[0];
+
+            data.forEach(row => {
+                if (row[taskKey]) {
+                    let tName = formatText(row[taskKey]);
+                    taskCounts[tName] = (taskCounts[tName] || 0) + 1;
+                }
+                Object.values(row).forEach(val => {
+                    let d = parseCustomDate(val);
+                    if (d) {
+                        if (d >= oneWeekAgo) weeklyCount++;
+                        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) monthlyCount++;
+                        if (d.getFullYear() === currentYear) yearlyCount++;
+                    }
+                });
+            });
+
+            // 1. Yearly Line Chart
+            const ctxYear = document.getElementById('yearlyChart').getContext('2d');
+            if (yearlyChartInstance) yearlyChartInstance.destroy();
+            yearlyChartInstance = new Chart(ctxYear, {
+                type: 'line',
+                data: { labels: [currentYear.toString()], datasets: [{ label: 'Yearly Cases', data: [yearlyCount], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
+            });
+
+            // 2. Monthly Line Chart
+            const ctxMonth = document.getElementById('monthlyChart').getContext('2d');
+            if (monthlyChartInstance) monthlyChartInstance.destroy();
+            monthlyChartInstance = new Chart(ctxMonth, {
+                type: 'line',
+                data: { labels: ['This Month'], datasets: [{ label: 'Monthly Cases', data: [monthlyCount], borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
+            });
+
+            // 3. Weekly Line Chart
+            const ctxWeek = document.getElementById('weeklyChart').getContext('2d');
+            if (weeklyChartInstance) weeklyChartInstance.destroy();
+            weeklyChartInstance = new Chart(ctxWeek, {
+                type: 'line',
+                data: { labels: ['Last 7 Days'], datasets: [{ label: 'Weekly Cases', data: [weeklyCount], borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
+            });
+
+            // 4. Task Distribution Line Chart
+            const taskLabelsArr = Object.keys(taskCounts);
+            const taskDataArr = Object.values(taskCounts);
+            const ctxTask = document.getElementById('taskChart').getContext('2d');
+            if (taskChartInstance) taskChartInstance.destroy();
+            taskChartInstance = new Chart(ctxTask, {
+                type: 'line',
+                data: { 
+                    labels: taskLabelsArr.length > 0 ? taskLabelsArr : ['No Tasks'], 
+                    datasets: [{ label: 'Task Count', data: taskDataArr.length > 0 ? taskDataArr : [0], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }] 
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
+            });
+        }
+
+        function renderTableAndCards(data) {
+            const headTr = document.getElementById('table-head');
+            const tbody = document.getElementById('table-body');
+
+            // Render Table Header with Column Search Inputs (Excluding 'image')
+            headTr.innerHTML = `
+                <tr>
+                    <th class="p-3 font-bold">#</th>
+                    ${headers.map(h => {
+                        let sortIndicator = '';
+                        if (currentSortColumn === h) sortIndicator = currentSortDirection === 'asc' ? ' ▲' : ' ▼';
+                        let currentVal = columnFilters[h] || '';
+                        let isImageCol = h.toLowerCase().includes('image');
+
+                        return `
+                            <th class="p-3">
+                                <div class="flex items-center justify-between cursor-pointer mb-1.5 hover:text-blue-500 transition-colors" onclick="sortTable('${h}')">
+                                    <span>${h}${sortIndicator}</span>
+                                </div>
+                                ${isImageCol ? '' : `<input type="text" placeholder="Filter ${h}..." value="${currentVal}" oninput="handleColumnSearch('${h}', this.value, event)" onclick="event.stopPropagation()" onfocus="this.setSelectionRange(this.value.length, this.value.length);" class="column-search-input w-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-slate-700/80 text-[11px] font-semibold text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm">`}
+                            </th>
+                        `;
+                    }).join('')}
+                </tr>
+            `;
+
+            tbody.innerHTML = '';
+            document.getElementById('stat-total').innerText = rawData.length;
+
+            let dailyCount = 0, weeklyCount = 0, monthlyCount = 0, yearlyCount = 0;
+            const now = new Date();
+            const todayStr = now.toDateString();
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            let todayActivityMap = {};
+            let todayTotalCases = 0;
+            let userCaseCounts = {};
+
+            let userKey = headers.find(h => h.toLowerCase().includes('name') || h.toLowerCase().includes('user')) || headers[0];
+            let taskKey = headers.length > 1 ? headers[1] : headers[0];
+
+            data.forEach((row, index) => {
+                let isTodayRow = false;
+                let rowUser = "Unknown";
+                let rowTask = "General";
+
+                if (row[userKey]) rowUser = formatText(row[userKey]);
+                if (row[taskKey]) rowTask = formatText(row[taskKey]);
+
+                userCaseCounts[rowUser] = (userCaseCounts[rowUser] || 0) + 1;
+
+                Object.values(row).forEach(val => {
+                    let d = parseCustomDate(val);
+                    if (d) {
+                        if (d.toDateString() === todayStr) {
+                            dailyCount++;
+                            isTodayRow = true;
+                        }
+                        if (d >= oneWeekAgo) weeklyCount++;
+                        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) monthlyCount++;
+                        if (d.getFullYear() === currentYear) yearlyCount++;
+                    }
+                });
+
+                if (isTodayRow) {
+                    todayTotalCases++;
+                    let mapKey = rowUser + "___" + rowTask;
+                    todayActivityMap[mapKey] = (todayActivityMap[mapKey] || 0) + 1;
+                }
+
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all";
+                let tdIndex = document.createElement('td');
+                tdIndex.className = "p-3 font-bold text-slate-400";
+                tdIndex.innerText = index + 1;
+                tr.appendChild(tdIndex);
+
+                headers.forEach(h => {
+                    let td = document.createElement('td');
+                    td.className = "p-3";
+                    td.innerText = row[h] !== undefined ? row[h] : '';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('stat-daily').innerText = dailyCount;
+            document.getElementById('stat-weekly').innerText = weeklyCount;
+            document.getElementById('stat-monthly').innerText = monthlyCount;
+            document.getElementById('stat-yearly').innerText = yearlyCount;
+
+            // Render Leaderboard
+            const leaderboardContainer = document.getElementById('leaderboard-container');
+            leaderboardContainer.innerHTML = '';
+            let sortedUsers = Object.keys(userCaseCounts).sort((a, b) => userCaseCounts[b] - userCaseCounts[a]);
+            let maxCount = sortedUsers.length > 0 ? userCaseCounts[sortedUsers[0]] : 1;
+
+            if (sortedUsers.length === 0) {
+                leaderboardContainer.innerHTML = `<div class="text-center text-slate-400 py-4 text-xs">No user data available for ranking in this date range.</div>`;
+            } else {
+                sortedUsers.forEach((user, idx) => {
+                    let count = userCaseCounts[user];
+                    let percentage = Math.round((count / maxCount) * 100);
+                    let rankBadgeBg = idx === 0 ? 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-white shadow-md shadow-amber-500/30' : (idx === 1 ? 'bg-gradient-to-tr from-slate-300 to-slate-400 text-white shadow-md' : (idx === 2 ? 'bg-gradient-to-tr from-amber-700 to-amber-600 text-white shadow-md' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'));
+
+                    let rowDiv = document.createElement('div');
+                    rowDiv.className = "flex items-center gap-4 p-3.5 rounded-2xl bg-white/50 dark:bg-dark-900/50 border border-slate-200/60 dark:border-slate-800/60 transition-all hover:scale-[1.01]";
+                    rowDiv.innerHTML = `
+                        <div class="w-8 h-8 rounded-xl ${rankBadgeBg} flex items-center justify-center font-black text-xs flex-shrink-0">#${idx + 1}</div>
+                        <div class="flex-1 space-y-1.5">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="font-extrabold text-slate-800 dark:text-slate-200">${user}</span>
+                                <span class="font-black text-blue-600 dark:text-blue-400">${count} Cases</span>
+                            </div>
+                            <div class="w-full bg-slate-200/70 dark:bg-dark-800 h-2 rounded-full overflow-hidden">
+                                <div class="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                    leaderboardContainer.appendChild(rowDiv);
+                });
+            }
+
+            // Render Today Activity Table Headers with Sort Indicators
+            let userSortIndicator = todaySortColumn === 'user' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+            let taskSortIndicator = todaySortColumn === 'task' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+            let countSortIndicator = todaySortColumn === 'count' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+
+            document.getElementById('today-table-head').innerHTML = `
+                <tr>
+                    <th class="p-4">#</th>
+                    <th class="p-4 hover:text-blue-500 transition-colors" onclick="sortTodayTable('user')">User Name${userSortIndicator}</th>
+                    <th class="p-4 hover:text-blue-500 transition-colors" onclick="sortTodayTable('task')">Task Name${taskSortIndicator}</th>
+                    <th class="p-4 text-right hover:text-blue-500 transition-colors" onclick="sortTodayTable('count')">Count${countSortIndicator}</th>
+                </tr>
+            `;
+
+            // Prepare Today Activity Array for Sorting
+            let todayItems = Object.keys(todayActivityMap).map(mapKey => {
+                let parts = mapKey.split('___');
+                return { user: parts[0], task: parts[1], count: todayActivityMap[mapKey] };
+            });
+
+            if (todaySortColumn) {
+                todayItems.sort((a, b) => {
+                    let valA = a[todaySortColumn];
+                    let valB = b[todaySortColumn];
+                    if (valA < valB) return todaySortDirection === 'asc' ? -1 : 1;
+                    if (valA > valB) return todaySortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            // Render Today Activity Table Body
+            const todayBody = document.getElementById('today-activity-body');
+            todayBody.innerHTML = '';
+            document.getElementById('today-count-badge').innerText = todayTotalCases + " Cases Today";
+
+            if (todayItems.length === 0) {
+                todayBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No activity recorded for today.</td></tr>`;
+            } else {
+                let i = 1;
+                todayItems.forEach(item => {
+                    let tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all";
+                    tr.innerHTML = `
+                        <td class="p-3 font-bold text-slate-400">${i++}</td>
+                        <td class="p-3 font-semibold">${item.user}</td>
+                        <td class="p-3"><span class="bg-slate-100 dark:bg-dark-800 px-2.5 py-1 rounded-xl">${item.task}</span></td>
+                        <td class="p-3 text-right font-black text-blue-500">${item.count}</td>
+                    `;
+                    todayBody.appendChild(tr);
+                });
+            }
+        }
+
+        function handleColumnSearch(column, value, event) {
+            columnFilters[column] = value;
+            filterAndRender();
+
+            if (event && event.target) {
+                let inputs = document.querySelectorAll('.column-search-input');
+                inputs.forEach(inp => {
+                    if (inp.getAttribute('oninput').includes(`'${column}'`)) {
+                        inp.focus();
+                        let val = inp.value;
+                        inp.value = '';
+                        inp.value = val;
+                    }
+                });
+            }
+        }
+
+        function exportCSV() {
+            if (filteredData.length === 0) return alert("No data to export!");
+            let csv = Papa.unparse(filteredData);
+            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'AppSheet_QA_Export.csv';
+            link.click();
+        }
+
+        function exportExcel() {
+            if (filteredData.length === 0) return alert("No data to export!");
+            let worksheet = XLSX.utils.json_to_sheet(filteredData);
+            let workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "QA Data");
+            XLSX.writeFile(workbook, 'AppSheet_QA_Export.xlsx');
+        }
+
+        function exportPDF() { window.print(); }
+    </script>
+</body>
+</html>
