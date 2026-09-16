@@ -69,6 +69,37 @@
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
+
+        /* Responsive Mobile Adjustments */
+        @media screen and (max-width: 768px) {
+            body {
+                overflow-x: hidden !important;
+                width: 100% !important;
+            }
+            main {
+                padding: 12px !important;
+            }
+            header {
+                height: auto !important;
+                min-height: auto !important;
+                padding: 12px !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+            }
+            header .flex {
+                width: 100% !important;
+                flex-wrap: wrap !important;
+            }
+            header input[type="text"], header select, header button {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            .overflow-x-auto {
+                width: 100% !important;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-900 dark:bg-dark-950 dark:text-slate-100 h-screen overflow-hidden flex flex-col antialiased transition-colors duration-300">
