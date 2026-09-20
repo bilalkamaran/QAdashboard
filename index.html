@@ -24,7 +24,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Inter Font -->
+    <!-- Plus Jakarta Sans Font -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -33,11 +33,11 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
         .dark ::-webkit-scrollbar-track { background: #090d16; }
         .dark ::-webkit-scrollbar-thumb { background: #1e293b; }
-        
-        #sidebar { 
+
+        #sidebar {
             width: 280px;
             min-width: 280px;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #sidebar.collapsed {
             width: 80px !important;
@@ -97,7 +97,6 @@
             #sidebar.mobile-open {
                 transform: translateX(0);
             }
-            /* Ignore the old "collapsed" desktop behavior on mobile */
             #sidebar.collapsed {
                 width: 260px !important;
                 min-width: 260px !important;
@@ -157,7 +156,7 @@
                 width: 100% !important;
             }
 
-            /* KPI cards: 2 per row on mobile instead of stacking full-width */
+            /* KPI cards: 2 per row on mobile */
             #page-dashboard > div.grid.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-5 {
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                 gap: 0.75rem !important;
@@ -171,7 +170,7 @@
             #status-el {
                 left: 12px;
                 right: 12px;
-                bottom: 12px;
+                bottom: 4px;
                 justify-content: center;
             }
         }
@@ -227,10 +226,10 @@
 
         <!-- Main Content Area -->
         <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100/70 dark:bg-dark-950 transition-colors duration-300 relative">
-            
+
             <!-- Top Navbar -->
             <header class="h-20 min-h-[80px] border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-dark-900/40 backdrop-blur-xl px-6 flex items-center justify-between z-10 transition-colors duration-300 gap-4 shadow-sm">
-                
+
                 <div class="flex items-center gap-3 flex-wrap">
                     <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 transition-all shadow-sm flex-shrink-0" title="Toggle Sidebar">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
@@ -290,12 +289,12 @@
                 </div>
             </header>
 
-            <!-- Scrollable Content -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                
+            <!-- Scrollable Content (pb-24 leaves room at the bottom so nothing is hidden) -->
+            <div class="flex-1 overflow-y-auto p-6 pb-24 space-y-6">
+
                 <!-- PAGE 1: DASHBOARD -->
                 <div id="page-dashboard" class="space-y-6">
-                    
+
                     <!-- KPI Cards -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
@@ -414,21 +413,21 @@
         </main>
     </div>
 
-    <!-- Status Badge -->
-    <div id="status-el" class="fixed bottom-4 right-4 z-50 text-xs bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-slate-700 dark:text-slate-200 px-4 py-3 rounded-2xl font-bold border border-slate-200/80 dark:border-slate-800 shadow-2xl flex items-center gap-2.5">
-        <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> Connecting to server...
+    <!-- Status Badge (small, bottom corner, auto-hides after loading) -->
+    <div id="status-el" class="fixed bottom-1 right-2 z-50 text-[11px] bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-bold border border-slate-200/80 dark:border-slate-800 shadow-lg flex items-center gap-2 transition-opacity duration-500">
+        <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Connecting to server...
     </div>
 
     <!-- Core Script -->
     <script>
-        const targetUrl = 'https://script.google.com/macros/s/AKfycbwNLSTPlukrPvIZnxXfeUXrvyZXqucEh8a8y1Xkym1KE7snXQaW984Lz1P195Ijy4JV/exec';
+        const targetUrl = 'https://script.google.com/macros/s/AKfycbySNhjysaxSSylM9WofYwe3jkkCwLg_lORLOVeC0wl2n0t1DlOLP7ZT-Vb0WFE2IOoC/exec';
 
         let rawData = [];
         let filteredData = [];
         let headers = [];
         let uniqueTasks = new Set();
         let uniqueUsers = new Set();
-        
+
         let currentSortColumn = null;
         let currentSortDirection = 'asc';
         let columnFilters = {}; // Stores search inputs for each column
@@ -451,13 +450,16 @@
         const searchInput = document.getElementById('search-input');
         const resetBtn = document.getElementById('reset-btn');
         const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+        /* ------------------------------------------------------------------
+           Helpers
+        ------------------------------------------------------------------ */
 
         function toggleDarkMode() {
             document.documentElement.classList.toggle('dark');
             renderCharts(filteredData);
         }
-
-        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
 
         function isMobileView() {
             return window.innerWidth <= 768;
@@ -477,11 +479,8 @@
             sidebarBackdrop.classList.remove('mobile-open');
         }
 
-        // Keep sidebar state sane when rotating/resizing across the mobile breakpoint
         window.addEventListener('resize', () => {
-            if (!isMobileView()) {
-                closeMobileSidebar();
-            }
+            if (!isMobileView()) closeMobileSidebar();
         });
 
         function updateProgress(percent, text) {
@@ -498,8 +497,86 @@
         function parseCustomDate(val) {
             if (!val) return null;
             let d = new Date(val);
-            return !isNaN(d.getTime()) ? d : null;
+            if (isNaN(d.getTime())) return null;
+            // Sanity check so random numbers / IDs are never treated as dates
+            const y = d.getFullYear();
+            if (y < 2000 || y > 2100) return null;
+            return d;
         }
+
+        // Local-time YYYY-MM-DD (avoids the UTC shift of toISOString())
+        function toLocalISODate(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        // Parse the value of an <input type="date"> as LOCAL time
+        function parseInputDate(str) {
+            if (!str) return null;
+            const [y, m, d] = str.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+
+        /* ------------------------------------------------------------------
+           KEY FIX: every row has exactly ONE date, taken from the Date column only
+        ------------------------------------------------------------------ */
+
+        let dateKeyCache = null;
+        function getDateKey() {
+            if (dateKeyCache && headers.includes(dateKeyCache)) return dateKeyCache;
+            dateKeyCache =
+                headers.find(h => h.toLowerCase() === 'date') ||
+                headers.find(h => /date|time|created|stamp/i.test(h)) ||
+                null;
+            return dateKeyCache;
+        }
+
+        function getRowDate(row) {
+            const key = getDateKey();
+            if (!key) return null;
+            return parseCustomDate(row[key]);
+        }
+
+        // Value shown in the table (nicely formatted date for the Date column)
+        function getCellDisplay(row, h) {
+            const v = row[h];
+            if (v === undefined || v === null) return '';
+            if (h === getDateKey()) {
+                const d = parseCustomDate(v);
+                if (d) return d.toLocaleString();
+            }
+            return v.toString();
+        }
+
+        // Counts each row ONCE per period
+        function computeCounts(data) {
+            const now = new Date();
+            const endOfToday = new Date(now); endOfToday.setHours(23, 59, 59, 999);
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const todayStr = now.toDateString();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            let daily = 0, weekly = 0, monthly = 0, yearly = 0;
+            const todayRows = new Set();
+
+            data.forEach((row, i) => {
+                const d = getRowDate(row);
+                if (!d || d > endOfToday) return; // ignore rows with no date or future dates
+                if (d.toDateString() === todayStr) { daily++; todayRows.add(i); }
+                if (d >= oneWeekAgo) weekly++;
+                if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) monthly++;
+                if (d.getFullYear() === currentYear) yearly++;
+            });
+
+            return { daily, weekly, monthly, yearly, todayRows };
+        }
+
+        /* ------------------------------------------------------------------
+           Navigation / presets
+        ------------------------------------------------------------------ */
 
         function switchPage(page) {
             if (isMobileView()) closeMobileSidebar();
@@ -508,16 +585,19 @@
             const navDashboard = document.getElementById('nav-dashboard');
             const navMain = document.getElementById('nav-main');
 
+            const active = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25";
+            const inactive = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60";
+
             if (page === 'dashboard') {
                 dashboardPage.classList.remove('hidden');
                 mainPage.classList.add('hidden');
-                navDashboard.className = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25";
-                navMain.className = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60";
+                navDashboard.className = active;
+                navMain.className = inactive;
             } else {
                 dashboardPage.classList.add('hidden');
                 mainPage.classList.remove('hidden');
-                navMain.className = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25";
-                navDashboard.className = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60";
+                navMain.className = active;
+                navDashboard.className = inactive;
             }
         }
 
@@ -528,30 +608,39 @@
 
         function setDatePreset(preset) {
             ['all', 'weekly', 'monthly', 'yearly'].forEach(p => {
-                let btn = document.getElementById('preset-' + p);
-                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
+                document.getElementById('preset-' + p).className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
             });
             document.getElementById('preset-' + preset).className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white";
 
-            let now = new Date();
+            const now = new Date();
             if (preset === 'all') {
                 startDateInput.value = '';
                 endDateInput.value = '';
             } else if (preset === 'weekly') {
-                let past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                startDateInput.value = past.toISOString().split('T')[0];
-                endDateInput.value = now.toISOString().split('T')[0];
+                const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                startDateInput.value = toLocalISODate(past);
+                endDateInput.value = toLocalISODate(now);
             } else if (preset === 'monthly') {
-                let past = new Date(now.getFullYear(), now.getMonth(), 1);
-                startDateInput.value = past.toISOString().split('T')[0];
-                endDateInput.value = now.toISOString().split('T')[0];
+                const past = new Date(now.getFullYear(), now.getMonth(), 1);
+                startDateInput.value = toLocalISODate(past);
+                endDateInput.value = toLocalISODate(now);
             } else if (preset === 'yearly') {
-                let past = new Date(now.getFullYear(), 0, 1);
-                startDateInput.value = past.toISOString().split('T')[0];
-                endDateInput.value = now.toISOString().split('T')[0];
+                const past = new Date(now.getFullYear(), 0, 1);
+                startDateInput.value = toLocalISODate(past);
+                endDateInput.value = toLocalISODate(now);
             }
             filterAndRender();
         }
+
+        function uncheckPresets() {
+            ['all', 'weekly', 'monthly', 'yearly'].forEach(p => {
+                document.getElementById('preset-' + p).className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
+            });
+        }
+
+        /* ------------------------------------------------------------------
+           Data loading
+        ------------------------------------------------------------------ */
 
         updateProgress(40, "Fetching data...");
 
@@ -571,12 +660,17 @@
                 updateProgress(100, "Completed");
 
                 if (!data || data.length === 0) {
-                    statusEl.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> No records found!`;
+                    statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> No records found!`;
                     return;
                 }
 
-                statusEl.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Loaded (${data.length} rows)`;
-                statusEl.className = "fixed bottom-4 right-4 z-50 text-xs bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-2xl font-bold border border-emerald-500/20 shadow-2xl flex items-center gap-2.5";
+                // Small badge in the bottom corner that fades out after 3 seconds
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Loaded (${data.length} rows)`;
+                statusEl.className = "fixed bottom-1 right-2 z-50 text-[11px] bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl font-bold border border-emerald-500/20 shadow-lg flex items-center gap-2 transition-opacity duration-500";
+                setTimeout(() => {
+                    statusEl.style.opacity = '0';
+                    statusEl.style.pointerEvents = 'none';
+                }, 3000);
 
                 rawData = data;
                 headers = Object.keys(rawData[0]).slice(0, 6);
@@ -586,7 +680,7 @@
             })
             .catch(err => {
                 updateProgress(100, "Failed");
-                statusEl.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Connection error!`;
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Connection error!`;
                 console.error(err);
             });
 
@@ -622,17 +716,14 @@
             resetBtn.addEventListener('click', resetFilters);
         }
 
-        function uncheckPresets() {
-            ['all', 'weekly', 'monthly', 'yearly'].forEach(p => {
-                let btn = document.getElementById('preset-' + p);
-                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
-            });
-        }
+        /* ------------------------------------------------------------------
+           Filtering / sorting
+        ------------------------------------------------------------------ */
 
         function filterAndRender() {
             let selectedUser = userFilterSelect.value;
-            let startDate = startDateInput.value ? new Date(startDateInput.value) : null;
-            let endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+            let startDate = parseInputDate(startDateInput.value);
+            let endDate = parseInputDate(endDateInput.value);
             if (endDate) endDate.setHours(23, 59, 59, 999);
             let searchText = searchInput.value.toLowerCase().trim();
 
@@ -645,14 +736,14 @@
             filteredData = rawData.filter(row => {
                 let matchUser = !selectedUser || (row[userKey] && row[userKey].toString().trim() === selectedUser);
                 let matchTask = selectedTasks.length === 0 || (row[taskKey] && selectedTasks.includes(row[taskKey].toString().trim()));
-                let matchSearch = !searchText || Object.values(row).some(val => val && val.toString().toLowerCase().includes(searchText));
-                
-                // Column-specific searches (Smart Prefix Matching: starts with input value)
+                let matchSearch = !searchText || headers.some(h => getCellDisplay(row, h).toLowerCase().includes(searchText));
+
+                // Column-specific searches (prefix matching on the displayed value)
                 let matchColumnFilters = true;
                 for (let col in columnFilters) {
                     let colVal = columnFilters[col];
                     if (colVal && colVal.trim() !== '') {
-                        let cellData = row[col] !== undefined && row[col] !== null ? row[col].toString().toLowerCase() : '';
+                        let cellData = getCellDisplay(row, col).toLowerCase();
                         let query = colVal.toLowerCase().trim();
                         if (!cellData.startsWith(query)) {
                             matchColumnFilters = false;
@@ -661,16 +752,11 @@
                     }
                 }
 
+                // Date range uses ONLY the Date column
                 let matchDate = true;
                 if (startDate || endDate) {
-                    let hasDateMatch = false;
-                    Object.values(row).forEach(val => {
-                        let d = parseCustomDate(val);
-                        if (d && (!startDate || d >= startDate) && (!endDate || d <= endDate)) {
-                            hasDateMatch = true;
-                        }
-                    });
-                    matchDate = hasDateMatch;
+                    const d = getRowDate(row);
+                    matchDate = !!d && (!startDate || d >= startDate) && (!endDate || d <= endDate);
                 }
                 return matchUser && matchTask && matchSearch && matchColumnFilters && matchDate;
             });
@@ -728,81 +814,70 @@
             renderCharts(data);
         }
 
+        /* ------------------------------------------------------------------
+           Charts
+        ------------------------------------------------------------------ */
+
         function renderCharts(data) {
             const isDark = document.documentElement.classList.contains('dark');
             const textColor = isDark ? '#94a3b8' : '#64748b';
             const gridColor = isDark ? '#1e293b' : '#e2e8f0';
 
-            let yearlyCount = 0, monthlyCount = 0, weeklyCount = 0;
-            let taskCounts = {};
-            const now = new Date();
-            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
+            const counts = computeCounts(data);
+            const currentYear = new Date().getFullYear();
             let taskKey = headers.length > 1 ? headers[1] : headers[0];
 
+            let taskCounts = {};
             data.forEach(row => {
                 if (row[taskKey]) {
                     let tName = formatText(row[taskKey]);
                     taskCounts[tName] = (taskCounts[tName] || 0) + 1;
                 }
-                Object.values(row).forEach(val => {
-                    let d = parseCustomDate(val);
-                    if (d) {
-                        if (d >= oneWeekAgo) weeklyCount++;
-                        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) monthlyCount++;
-                        if (d.getFullYear() === currentYear) yearlyCount++;
-                    }
+            });
+
+            const baseOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } },
+                    x: { grid: { display: false }, ticks: { color: textColor } }
+                }
+            };
+
+            function makeLine(canvasId, oldInstance, label, labels, values, color, bg) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                if (oldInstance) oldInstance.destroy();
+                return new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: labels, datasets: [{ label: label, data: values, borderColor: color, backgroundColor: bg, fill: true, tension: 0.4, borderWidth: 3 }] },
+                    options: baseOptions
                 });
-            });
+            }
 
-            // 1. Yearly Line Chart
-            const ctxYear = document.getElementById('yearlyChart').getContext('2d');
-            if (yearlyChartInstance) yearlyChartInstance.destroy();
-            yearlyChartInstance = new Chart(ctxYear, {
-                type: 'line',
-                data: { labels: [currentYear.toString()], datasets: [{ label: 'Yearly Cases', data: [yearlyCount], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
-            });
+            yearlyChartInstance = makeLine('yearlyChart', yearlyChartInstance, 'Yearly Cases', [currentYear.toString()], [counts.yearly], '#f59e0b', 'rgba(245, 158, 11, 0.1)');
+            monthlyChartInstance = makeLine('monthlyChart', monthlyChartInstance, 'Monthly Cases', ['This Month'], [counts.monthly], '#6366f1', 'rgba(99, 102, 241, 0.1)');
+            weeklyChartInstance = makeLine('weeklyChart', weeklyChartInstance, 'Weekly Cases', ['Last 7 Days'], [counts.weekly], '#a855f7', 'rgba(168, 85, 247, 0.1)');
 
-            // 2. Monthly Line Chart
-            const ctxMonth = document.getElementById('monthlyChart').getContext('2d');
-            if (monthlyChartInstance) monthlyChartInstance.destroy();
-            monthlyChartInstance = new Chart(ctxMonth, {
-                type: 'line',
-                data: { labels: ['This Month'], datasets: [{ label: 'Monthly Cases', data: [monthlyCount], borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
-            });
-
-            // 3. Weekly Line Chart
-            const ctxWeek = document.getElementById('weeklyChart').getContext('2d');
-            if (weeklyChartInstance) weeklyChartInstance.destroy();
-            weeklyChartInstance = new Chart(ctxWeek, {
-                type: 'line',
-                data: { labels: ['Last 7 Days'], datasets: [{ label: 'Weekly Cases', data: [weeklyCount], borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
-            });
-
-            // 4. Task Distribution Line Chart
             const taskLabelsArr = Object.keys(taskCounts);
             const taskDataArr = Object.values(taskCounts);
-            const ctxTask = document.getElementById('taskChart').getContext('2d');
-            if (taskChartInstance) taskChartInstance.destroy();
-            taskChartInstance = new Chart(ctxTask, {
-                type: 'line',
-                data: { 
-                    labels: taskLabelsArr.length > 0 ? taskLabelsArr : ['No Tasks'], 
-                    datasets: [{ label: 'Task Count', data: taskDataArr.length > 0 ? taskDataArr : [0], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.4, borderWidth: 3 }] 
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textColor } } } }
-            });
+            taskChartInstance = makeLine(
+                'taskChart', taskChartInstance, 'Task Count',
+                taskLabelsArr.length > 0 ? taskLabelsArr : ['No Tasks'],
+                taskDataArr.length > 0 ? taskDataArr : [0],
+                '#3b82f6', 'rgba(59, 130, 246, 0.1)'
+            );
         }
+
+        /* ------------------------------------------------------------------
+           Tables, KPI cards, leaderboard
+        ------------------------------------------------------------------ */
 
         function renderTableAndCards(data) {
             const headTr = document.getElementById('table-head');
             const tbody = document.getElementById('table-body');
 
-            // Render Table Header with Column Search Inputs (Excluding 'image')
+            // Table header with column search inputs (no input for the image column)
             headTr.innerHTML = `
                 <tr>
                     <th class="p-3 font-bold">#</th>
@@ -827,45 +902,22 @@
             tbody.innerHTML = '';
             document.getElementById('stat-total').innerText = rawData.length;
 
-            let dailyCount = 0, weeklyCount = 0, monthlyCount = 0, yearlyCount = 0;
-            const now = new Date();
-            const todayStr = now.toDateString();
-            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
+            // KPI counts: one date per row, from the Date column only
+            const counts = computeCounts(data);
 
             let todayActivityMap = {};
-            let todayTotalCases = 0;
             let userCaseCounts = {};
 
             let userKey = headers.find(h => h.toLowerCase().includes('name') || h.toLowerCase().includes('user')) || headers[0];
             let taskKey = headers.length > 1 ? headers[1] : headers[0];
 
             data.forEach((row, index) => {
-                let isTodayRow = false;
-                let rowUser = "Unknown";
-                let rowTask = "General";
-
-                if (row[userKey]) rowUser = formatText(row[userKey]);
-                if (row[taskKey]) rowTask = formatText(row[taskKey]);
+                let rowUser = row[userKey] ? formatText(row[userKey]) : "Unknown";
+                let rowTask = row[taskKey] ? formatText(row[taskKey]) : "General";
 
                 userCaseCounts[rowUser] = (userCaseCounts[rowUser] || 0) + 1;
 
-                Object.values(row).forEach(val => {
-                    let d = parseCustomDate(val);
-                    if (d) {
-                        if (d.toDateString() === todayStr) {
-                            dailyCount++;
-                            isTodayRow = true;
-                        }
-                        if (d >= oneWeekAgo) weeklyCount++;
-                        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) monthlyCount++;
-                        if (d.getFullYear() === currentYear) yearlyCount++;
-                    }
-                });
-
-                if (isTodayRow) {
-                    todayTotalCases++;
+                if (counts.todayRows.has(index)) {
                     let mapKey = rowUser + "___" + rowTask;
                     todayActivityMap[mapKey] = (todayActivityMap[mapKey] || 0) + 1;
                 }
@@ -880,18 +932,18 @@
                 headers.forEach(h => {
                     let td = document.createElement('td');
                     td.className = "p-3";
-                    td.innerText = row[h] !== undefined ? row[h] : '';
+                    td.innerText = getCellDisplay(row, h);
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
             });
 
-            document.getElementById('stat-daily').innerText = dailyCount;
-            document.getElementById('stat-weekly').innerText = weeklyCount;
-            document.getElementById('stat-monthly').innerText = monthlyCount;
-            document.getElementById('stat-yearly').innerText = yearlyCount;
+            document.getElementById('stat-daily').innerText = counts.daily;
+            document.getElementById('stat-weekly').innerText = counts.weekly;
+            document.getElementById('stat-monthly').innerText = counts.monthly;
+            document.getElementById('stat-yearly').innerText = counts.yearly;
 
-            // Render Leaderboard
+            // Leaderboard
             const leaderboardContainer = document.getElementById('leaderboard-container');
             leaderboardContainer.innerHTML = '';
             let sortedUsers = Object.keys(userCaseCounts).sort((a, b) => userCaseCounts[b] - userCaseCounts[a]);
@@ -923,7 +975,7 @@
                 });
             }
 
-            // Render Today Activity Table Headers with Sort Indicators
+            // Today's activity table header with sort indicators
             let userSortIndicator = todaySortColumn === 'user' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
             let taskSortIndicator = todaySortColumn === 'task' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
             let countSortIndicator = todaySortColumn === 'count' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
@@ -937,7 +989,6 @@
                 </tr>
             `;
 
-            // Prepare Today Activity Array for Sorting
             let todayItems = Object.keys(todayActivityMap).map(mapKey => {
                 let parts = mapKey.split('___');
                 return { user: parts[0], task: parts[1], count: todayActivityMap[mapKey] };
@@ -953,10 +1004,9 @@
                 });
             }
 
-            // Render Today Activity Table Body
             const todayBody = document.getElementById('today-activity-body');
             todayBody.innerHTML = '';
-            document.getElementById('today-count-badge').innerText = todayTotalCases + " Cases Today";
+            document.getElementById('today-count-badge').innerText = counts.todayRows.size + " Cases Today";
 
             if (todayItems.length === 0) {
                 todayBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No activity recorded for today.</td></tr>`;
@@ -992,6 +1042,10 @@
                 });
             }
         }
+
+        /* ------------------------------------------------------------------
+           Export
+        ------------------------------------------------------------------ */
 
         function exportCSV() {
             if (filteredData.length === 0) return alert("No data to export!");
