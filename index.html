@@ -420,7 +420,7 @@
 
     <!-- Core Script -->
     <script>
-        const targetUrl = 'https://script.google.com/macros/s/AKfycbws14elCdubM3s4t8G6sGhaIsokwDicMdimXSxiBHoupNNdzFY8OeVVgQ_Bzm1lizFp/exec'
+        const targetUrl = 'https://script.google.com/macros/s/AKfycbwePSbdzzsWDsLGLvLsa2jo_dxRRLjcV7XPIlEKmULam9vEPlk5JtzE7s5snMDdZXR3/exec'
 
         // Order of the date in your sheet:
         // 'MDY' => 10/4/2026 means October 4   |   'DMY' => 10/4/2026 means 10 April
@@ -674,8 +674,16 @@
                 let parsed;
                 try {
                     let jsonData = JSON.parse(textData);
+                    // If the Apps Script returned an error, show it instead of "No records found"
+                    if (!Array.isArray(jsonData) && jsonData && jsonData.status === 'error') {
+                        updateProgress(100, "Failed");
+                        statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Server error: ${jsonData.message}`;
+                        console.error('Apps Script error:', jsonData.message);
+                        throw new Error('server-error');
+                    }
                     parsed = { data: Array.isArray(jsonData) ? jsonData : (jsonData.data || []) };
                 } catch (e) {
+                    if (e.message === 'server-error') return;
                     parsed = Papa.parse(textData, { header: true, skipEmptyLines: true });
                 }
 
