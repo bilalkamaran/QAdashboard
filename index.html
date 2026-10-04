@@ -420,7 +420,11 @@
 
     <!-- Core Script -->
     <script>
-        const targetUrl = 'https://script.google.com/macros/s/AKfycbyh5qtPj07YczvFSiX3wdvRijBrWlbO8iOdw5J3pGS05Oub2QMg3oISefJz6RTdxubz/exec';
+        const targetUrl = 'https://script.google.com/macros/s/AKfycbw0Phyysb_FKzhpiGzv7DSoX0cFJSNqQ2-5VsOxIkzZKGC_Y2pWV2en_unyyYxLe7TJ/exec'
+
+        // Order of the date in your sheet:
+        // 'MDY' => 10/4/2026 means October 4   |   'DMY' => 10/4/2026 means 10 April
+        const DATE_ORDER = 'MDY';
 
         let rawData = [];
         let filteredData = [];
@@ -494,13 +498,36 @@
             return text.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
 
+        // Parses the date text exactly as it is stored in the sheet
+        // (e.g. "10/4/2026 10:22:21 AM"), without any timezone conversion.
         function parseCustomDate(val) {
             if (!val) return null;
-            let d = new Date(val);
+            if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+
+            const s = val.toString().trim();
+
+            // Matches: 10/4/2026 10:22:21 AM   (time and AM/PM are optional)
+            const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?)?/);
+            if (m) {
+                let a = parseInt(m[1], 10), b = parseInt(m[2], 10), year = parseInt(m[3], 10);
+                let month = DATE_ORDER === 'MDY' ? a : b;
+                let day   = DATE_ORDER === 'MDY' ? b : a;
+                let hour = m[4] ? parseInt(m[4], 10) : 0;
+                const min = m[5] ? parseInt(m[5], 10) : 0;
+                const sec = m[6] ? parseInt(m[6], 10) : 0;
+                const ampm = m[7] ? m[7].toUpperCase() : null;
+                if (ampm === 'PM' && hour < 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+
+                const d = new Date(year, month - 1, day, hour, min, sec);
+                if (isNaN(d.getTime()) || year < 2000 || year > 2100) return null;
+                return d;
+            }
+
+            // Fallback (ISO strings etc.)
+            const d = new Date(s);
             if (isNaN(d.getTime())) return null;
-            // Sanity check so random numbers / IDs are never treated as dates
-            const y = d.getFullYear();
-            if (y < 2000 || y > 2100) return null;
+            if (d.getFullYear() < 2000 || d.getFullYear() > 2100) return null;
             return d;
         }
 
@@ -520,7 +547,7 @@
         }
 
         /* ------------------------------------------------------------------
-           KEY FIX: every row has exactly ONE date, taken from the Date column only
+           Every row has exactly ONE date, taken from the Date column only
         ------------------------------------------------------------------ */
 
         let dateKeyCache = null;
@@ -539,14 +566,10 @@
             return parseCustomDate(row[key]);
         }
 
-        // Value shown in the table (nicely formatted date for the Date column)
+        // Value shown in the table: EXACTLY as stored (no toLocaleString)
         function getCellDisplay(row, h) {
             const v = row[h];
             if (v === undefined || v === null) return '';
-            if (h === getDateKey()) {
-                const d = parseCustomDate(v);
-                if (d) return d.toLocaleString();
-            }
             return v.toString();
         }
 
@@ -802,9 +825,19 @@
 
         function updateAll(data) {
             if (currentSortColumn) {
+                const isDateCol = currentSortColumn === getDateKey();
                 filteredData.sort((a, b) => {
-                    let valA = a[currentSortColumn] !== undefined ? a[currentSortColumn] : '';
-                    let valB = b[currentSortColumn] !== undefined ? b[currentSortColumn] : '';
+                    let valA, valB;
+                    if (isDateCol) {
+                        // Sort the date column by real date, not by text
+                        const da = parseCustomDate(a[currentSortColumn]);
+                        const db = parseCustomDate(b[currentSortColumn]);
+                        valA = da ? da.getTime() : 0;
+                        valB = db ? db.getTime() : 0;
+                    } else {
+                        valA = a[currentSortColumn] !== undefined ? a[currentSortColumn] : '';
+                        valB = b[currentSortColumn] !== undefined ? b[currentSortColumn] : '';
+                    }
                     if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
                     if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
                     return 0;
