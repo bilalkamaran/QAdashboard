@@ -698,7 +698,9 @@
                 // Small badge in the bottom corner that fades out after 3 seconds
                 statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Loaded (${data.length} rows)`;
                 statusEl.className = "fixed bottom-1 right-2 z-50 text-[11px] bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl font-bold border border-emerald-500/20 shadow-lg flex items-center gap-2 transition-opacity duration-500";
+                window.__keepStatus = false;
                 setTimeout(() => {
+                    if (window.__keepStatus) return; // keep the warning visible
                     statusEl.style.opacity = '0';
                     statusEl.style.pointerEvents = 'none';
                 }, 3000);
@@ -708,6 +710,23 @@
                 extractFilters();
                 filteredData = rawData;
                 updateAll(filteredData);
+
+                // Diagnostics: tells you exactly whether the dates are readable
+                const dk = getDateKey();
+                if (!dk) {
+                    window.__keepStatus = true;
+                    statusEl.style.opacity = '1';
+                    statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> No Date column found. Columns: ${headers.join(', ')}`;
+                } else {
+                    let bad = 0, sample = '';
+                    rawData.forEach(r => { if (!getRowDate(r)) { bad++; if (!sample) sample = String(r[dk]); } });
+                    if (bad > 0) {
+                        window.__keepStatus = true;
+                        statusEl.style.opacity = '1';
+                        statusEl.style.pointerEvents = 'auto';
+                        statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> ${bad} of ${rawData.length} rows have an unreadable date. Example: "${sample}"`;
+                    }
+                }
             })
             .catch(err => {
                 updateProgress(100, "Failed");
