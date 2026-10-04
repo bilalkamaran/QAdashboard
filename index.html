@@ -4,16 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AppSheet QA Advanced Dashboard</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: { extend: { colors: { dark: { 950: '#090d16', 900: '#0f172a', 800: '#1e293b', 700: '#334155' } } } }
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 950: '#090d16', 900: '#0f172a', 800: '#1e293b', 700: '#334155' }
+                    }
+                }
+            }
         }
     </script>
+    <!-- PapaParse for CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- SheetJS for Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Plus Jakarta Sans Font -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -23,57 +34,176 @@
         .dark ::-webkit-scrollbar-track { background: #090d16; }
         .dark ::-webkit-scrollbar-thumb { background: #1e293b; }
 
-        #sidebar { width: 280px; min-width: 280px; transition: width 0.3s cubic-bezier(0.4,0,0.2,1), min-width 0.3s cubic-bezier(0.4,0,0.2,1); }
-        #sidebar.collapsed { width: 80px !important; min-width: 80px !important; }
-        #sidebar.collapsed .sidebar-text { display: none !important; }
-        #sidebar.collapsed #sidebar-brand-box { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-        #sidebar.collapsed nav button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+        #sidebar {
+            width: 280px;
+            min-width: 280px;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #sidebar.collapsed {
+            width: 80px !important;
+            min-width: 80px !important;
+        }
+        #sidebar.collapsed .sidebar-text {
+            display: none !important;
+        }
+        #sidebar.collapsed #sidebar-brand-box {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+        #sidebar.collapsed nav button {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
 
-        .glass-card { background: rgba(255,255,255,0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.4); }
-        .dark .glass-card { background: rgba(15,23,42,0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
 
-        #sidebar-backdrop { display: none; }
+        /* Sidebar backdrop (mobile only) */
+        #sidebar-backdrop {
+            display: none;
+        }
 
+        /* Responsive Mobile Adjustments */
         @media screen and (max-width: 768px) {
-            html, body { overflow-x: hidden !important; width: 100% !important; }
-            #sidebar { position: fixed !important; top: 0; left: 0; bottom: 0; width: 260px !important; min-width: 260px !important; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1) !important; z-index: 40; }
-            #sidebar.mobile-open { transform: translateX(0); }
-            #sidebar.collapsed { width: 260px !important; min-width: 260px !important; }
-            #sidebar.collapsed .sidebar-text { display: block !important; }
-            #sidebar.collapsed #sidebar-brand-box { justify-content: flex-start !important; padding-left: 0.25rem !important; }
-            #sidebar.collapsed nav button { justify-content: flex-start !important; padding-left: 0.875rem !important; }
-            #sidebar-backdrop.mobile-open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 30; }
-            main { padding: 0 !important; width: 100% !important; min-width: 0 !important; }
-            header { height: auto !important; min-height: auto !important; padding: 10px 12px !important; flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
-            header > div.flex.items-center.gap-3.flex-wrap { flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; padding-bottom: 4px; scrollbar-width: none; }
+            html, body {
+                overflow-x: hidden !important;
+                width: 100% !important;
+            }
+
+            /* Sidebar becomes an off-canvas drawer on mobile */
+            #sidebar {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 260px !important;
+                min-width: 260px !important;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                z-index: 40;
+            }
+            #sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            #sidebar.collapsed {
+                width: 260px !important;
+                min-width: 260px !important;
+            }
+            #sidebar.collapsed .sidebar-text {
+                display: block !important;
+            }
+            #sidebar.collapsed #sidebar-brand-box {
+                justify-content: flex-start !important;
+                padding-left: 0.25rem !important;
+            }
+            #sidebar.collapsed nav button {
+                justify-content: flex-start !important;
+                padding-left: 0.875rem !important;
+            }
+
+            #sidebar-backdrop.mobile-open {
+                display: block;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 30;
+            }
+
+            main {
+                padding: 0 !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            /* Header becomes a compact bar with a horizontally scrolling filter strip */
+            header {
+                height: auto !important;
+                min-height: auto !important;
+                padding: 10px 12px !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+            }
+            header > div.flex.items-center.gap-3.flex-wrap {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 4px;
+                scrollbar-width: none;
+            }
             header > div.flex.items-center.gap-3.flex-wrap::-webkit-scrollbar { display: none; }
-            header > div.flex.items-center.gap-3.flex-wrap > * { flex-shrink: 0 !important; }
-            header input[type="text"]#search-input { width: 9rem !important; }
-            header .flex.items-center.gap-2.flex-shrink-0 { justify-content: flex-end !important; flex-wrap: wrap !important; width: 100% !important; }
-            #page-dashboard > div.grid.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-5 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.75rem !important; }
-            .overflow-x-auto { width: 100% !important; -webkit-overflow-scrolling: touch; }
-            #status-el { left: 12px; right: 12px; bottom: 4px; justify-content: center; }
+            header > div.flex.items-center.gap-3.flex-wrap > * {
+                flex-shrink: 0 !important;
+            }
+            header input[type="text"]#search-input {
+                width: 9rem !important;
+            }
+            header .flex.items-center.gap-2.flex-shrink-0 {
+                justify-content: flex-end !important;
+                flex-wrap: wrap !important;
+                width: 100% !important;
+            }
+
+            /* KPI cards: 2 per row on mobile */
+            #page-dashboard > div.grid.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-5 {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 0.75rem !important;
+            }
+
+            .overflow-x-auto {
+                width: 100% !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #status-el {
+                left: 12px;
+                right: 12px;
+                bottom: 4px;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-900 dark:bg-dark-950 dark:text-slate-100 h-screen overflow-hidden flex flex-col antialiased transition-colors duration-300">
 
+    <!-- Top Loading Progress Bar -->
     <div id="progress-container" class="fixed top-0 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-900 z-50 overflow-hidden">
         <div id="progress-bar" class="h-full bg-blue-600 transition-all duration-300 w-0"></div>
     </div>
 
+    <!-- Main Container -->
     <div class="flex h-full w-full overflow-hidden">
+
+        <!-- Mobile-only backdrop, closes the sidebar drawer when tapped -->
         <div id="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
 
+        <!-- Sidebar Navigation -->
         <aside id="sidebar" class="bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between p-4 z-20 h-full overflow-hidden shadow-2xl">
             <div class="space-y-6">
+                <!-- Brand Header -->
                 <div class="flex items-center gap-3 px-1 transition-all duration-300" id="sidebar-brand-box">
-                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-black text-lg flex-shrink-0">QA</div>
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-black text-lg flex-shrink-0">
+                        QA
+                    </div>
                     <div class="sidebar-text whitespace-nowrap overflow-hidden transition-all duration-300">
                         <h1 class="font-extrabold text-sm tracking-tight">AppSheet QA</h1>
                         <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Enterprise Control Hub</p>
                     </div>
                 </div>
+
+                <!-- Nav Links -->
                 <nav class="space-y-2">
                     <button onclick="switchPage('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25">
                         <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
@@ -85,6 +215,7 @@
                     </button>
                 </nav>
             </div>
+
             <div class="space-y-3 overflow-hidden bg-slate-50 dark:bg-dark-950/50 p-3 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 sidebar-text">
                 <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-bold">
                     <span id="progress-text">System Ready</span>
@@ -93,8 +224,10 @@
             </div>
         </aside>
 
+        <!-- Main Content Area -->
         <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100/70 dark:bg-dark-950 transition-colors duration-300 relative">
 
+            <!-- Top Navbar -->
             <header class="h-20 min-h-[80px] border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-dark-900/40 backdrop-blur-xl px-6 flex items-center justify-between z-10 transition-colors duration-300 gap-4 shadow-sm">
 
                 <div class="flex items-center gap-3 flex-wrap">
@@ -102,6 +235,7 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
 
+                    <!-- Quick Date Presets -->
                     <div class="flex items-center bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-700/80 p-1 rounded-xl shadow-sm gap-1">
                         <button onclick="setDatePreset('all')" id="preset-all" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white">All</button>
                         <button onclick="setDatePreset('weekly')" id="preset-weekly" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Weekly</button>
@@ -109,11 +243,13 @@
                         <button onclick="setDatePreset('yearly')" id="preset-yearly" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Yearly</button>
                     </div>
 
+                    <!-- Search Input -->
                     <div class="relative">
                         <input type="text" id="search-input" placeholder="Search database..." class="bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 px-4 py-2.5 pl-9 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm w-40">
                         <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
 
+                    <!-- Task Dropdown Filter -->
                     <div class="relative">
                         <button id="task-btn" class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 transition-all shadow-sm">
                             <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
@@ -123,6 +259,7 @@
                         <div id="task-menu" class="hidden absolute left-0 mt-2 w-64 bg-white dark:bg-dark-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-3 z-50 space-y-1.5 max-h-60 overflow-y-auto"></div>
                     </div>
 
+                    <!-- User Filter Select -->
                     <div class="relative">
                         <select id="user-filter-select" class="appearance-none bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 px-3.5 py-2.5 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm cursor-pointer">
                             <option value="">All Users</option>
@@ -132,6 +269,7 @@
                         </div>
                     </div>
 
+                    <!-- Custom Date Range -->
                     <div class="flex items-center gap-1.5 bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-700/80 px-3 py-1.5 rounded-xl text-xs shadow-sm">
                         <input type="date" id="start-date-input" class="bg-transparent text-slate-700 dark:text-slate-200 font-semibold focus:outline-none cursor-pointer" title="Start Date">
                         <span class="text-slate-400 font-bold">-</span>
@@ -151,11 +289,13 @@
                 </div>
             </header>
 
+            <!-- Scrollable Content (pb-24 leaves room at the bottom so nothing is hidden) -->
             <div class="flex-1 overflow-y-auto p-6 pb-24 space-y-6">
 
                 <!-- PAGE 1: DASHBOARD -->
                 <div id="page-dashboard" class="space-y-6">
 
+                    <!-- KPI Cards -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
                             <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Rows</span>
@@ -194,13 +334,16 @@
                         </div>
                     </div>
 
+                    <!-- LEADERBOARD -->
                     <div class="glass-card rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-slate-800/80">
                         <div class="p-6 border-b border-slate-200/60 dark:border-slate-800/60 flex justify-between items-center bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent">
                             <div class="flex items-center gap-3">
                                 <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-white shadow-lg shadow-amber-500/30">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
                                 </div>
-                                <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-white">Leaderboard</h3>
+                                <div>
+                                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-white">Leaderboard</h3>
+                                </div>
                             </div>
                             <span class="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-extrabold px-3 py-1.5 rounded-xl border border-blue-500/20 shadow-sm">Live Ranking</span>
                         </div>
@@ -209,6 +352,7 @@
                         </div>
                     </div>
 
+                    <!-- Line Charts Grid -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div class="glass-card p-6 rounded-3xl shadow-xl flex flex-col">
                             <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">Yearly Line Analytics</h3>
@@ -228,6 +372,7 @@
                         </div>
                     </div>
 
+                    <!-- Today's Activity Table -->
                     <div class="glass-card rounded-3xl shadow-xl overflow-hidden">
                         <div class="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex justify-between items-center">
                             <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Today's Activity Breakdown</h3>
@@ -268,12 +413,14 @@
         </main>
     </div>
 
+    <!-- Status Badge (small, bottom corner, auto-hides after loading) -->
     <div id="status-el" class="fixed bottom-1 right-2 z-50 text-[11px] bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-bold border border-slate-200/80 dark:border-slate-800 shadow-lg flex items-center gap-2 transition-opacity duration-500">
         <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Connecting to server...
     </div>
 
+    <!-- Core Script -->
     <script>
-        const targetUrl = 'https://script.google.com/macros/s/AKfycbzxyLuQP3fvfY7mrfiudDEj2LehcHx9DUQusovL8URmX4pUa6O_avlsLtOSLDJ0NCwn/exec';
+        const targetUrl = 'https://script.google.com/macros/s/AKfycbySNhjysaxSSylM9WofYwe3jkkCwLg_lORLOVeC0wl2n0t1DlOLP7ZT-Vb0WFE2IOoC/exec';
 
         let rawData = [];
         let filteredData = [];
@@ -283,7 +430,7 @@
 
         let currentSortColumn = null;
         let currentSortDirection = 'asc';
-        let columnFilters = {};
+        let columnFilters = {}; // Stores search inputs for each column
 
         let todaySortColumn = null;
         let todaySortDirection = 'asc';
@@ -305,14 +452,18 @@
         const sidebar = document.getElementById('sidebar');
         const sidebarBackdrop = document.getElementById('sidebar-backdrop');
 
-        /* ---------------- Helpers ---------------- */
+        /* ------------------------------------------------------------------
+           Helpers
+        ------------------------------------------------------------------ */
 
         function toggleDarkMode() {
             document.documentElement.classList.toggle('dark');
             renderCharts(filteredData);
         }
 
-        function isMobileView() { return window.innerWidth <= 768; }
+        function isMobileView() {
+            return window.innerWidth <= 768;
+        }
 
         function toggleSidebar() {
             if (isMobileView()) {
@@ -328,7 +479,9 @@
             sidebarBackdrop.classList.remove('mobile-open');
         }
 
-        window.addEventListener('resize', () => { if (!isMobileView()) closeMobileSidebar(); });
+        window.addEventListener('resize', () => {
+            if (!isMobileView()) closeMobileSidebar();
+        });
 
         function updateProgress(percent, text) {
             document.getElementById('progress-bar').style.width = percent + '%';
@@ -341,53 +494,17 @@
             return text.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
 
-        /* ---------- DATE PARSING (fixed) ---------- */
-
-        let DATE_ORDER = 'MDY'; // auto-detected after data loads
-
-        function detectDateOrder(rows) {
-            const key = getDateKey();
-            if (!key) return;
-            for (const r of rows) {
-                const m = String(r[key] || '').match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
-                if (!m) continue;
-                if (+m[1] > 12) { DATE_ORDER = 'DMY'; return; }
-                if (+m[2] > 12) { DATE_ORDER = 'MDY'; return; }
-            }
-        }
-
         function parseCustomDate(val) {
-            if (val === undefined || val === null || val === '') return null;
-            const s = String(val).trim();
-            let d = null;
-
-            // dd/mm/yyyy or mm/dd/yyyy (+ optional time, AM/PM)
-            let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/i);
-            if (m) {
-                const a = +m[1], b = +m[2], y = +m[3];
-                const day = DATE_ORDER === 'DMY' ? a : b;
-                const mon = DATE_ORDER === 'DMY' ? b : a;
-                let h = +(m[4] || 0);
-                const mi = +(m[5] || 0), se = +(m[6] || 0);
-                if (m[7]) {
-                    const pm = m[7].toUpperCase() === 'PM';
-                    if (pm && h < 12) h += 12;
-                    if (!pm && h === 12) h = 0;
-                }
-                d = new Date(y, mon - 1, day, h, mi, se);
-            } else {
-                // yyyy-mm-dd or yyyy-mm-ddTHH:mm:ss (read as LOCAL time, no 'Z' shift)
-                m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
-                if (m) d = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
-                else d = new Date(s);
-            }
-
-            if (!d || isNaN(d.getTime())) return null;
+            if (!val) return null;
+            let d = new Date(val);
+            if (isNaN(d.getTime())) return null;
+            // Sanity check so random numbers / IDs are never treated as dates
             const y = d.getFullYear();
             if (y < 2000 || y > 2100) return null;
             return d;
         }
 
+        // Local-time YYYY-MM-DD (avoids the UTC shift of toISOString())
         function toLocalISODate(d) {
             const y = d.getFullYear();
             const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -395,13 +512,16 @@
             return `${y}-${m}-${day}`;
         }
 
+        // Parse the value of an <input type="date"> as LOCAL time
         function parseInputDate(str) {
             if (!str) return null;
             const [y, m, d] = str.split('-').map(Number);
             return new Date(y, m - 1, d);
         }
 
-        /* ---------- One date per row, from the Date column only ---------- */
+        /* ------------------------------------------------------------------
+           KEY FIX: every row has exactly ONE date, taken from the Date column only
+        ------------------------------------------------------------------ */
 
         let dateKeyCache = null;
         function getDateKey() {
@@ -419,6 +539,7 @@
             return parseCustomDate(row[key]);
         }
 
+        // Value shown in the table (nicely formatted date for the Date column)
         function getCellDisplay(row, h) {
             const v = row[h];
             if (v === undefined || v === null) return '';
@@ -429,6 +550,7 @@
             return v.toString();
         }
 
+        // Counts each row ONCE per period
         function computeCounts(data) {
             const now = new Date();
             const endOfToday = new Date(now); endOfToday.setHours(23, 59, 59, 999);
@@ -442,7 +564,7 @@
 
             data.forEach((row, i) => {
                 const d = getRowDate(row);
-                if (!d || d > endOfToday) return;
+                if (!d || d > endOfToday) return; // ignore rows with no date or future dates
                 if (d.toDateString() === todayStr) { daily++; todayRows.add(i); }
                 if (d >= oneWeekAgo) weekly++;
                 if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) monthly++;
@@ -452,7 +574,9 @@
             return { daily, weekly, monthly, yearly, todayRows };
         }
 
-        /* ---------------- Navigation / presets ---------------- */
+        /* ------------------------------------------------------------------
+           Navigation / presets
+        ------------------------------------------------------------------ */
 
         function switchPage(page) {
             if (isMobileView()) closeMobileSidebar();
@@ -482,14 +606,11 @@
             if (!taskBtn.contains(e.target) && !taskMenu.contains(e.target)) taskMenu.classList.add('hidden');
         });
 
-        const PRESET_OFF = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
-        const PRESET_ON = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white";
-
         function setDatePreset(preset) {
             ['all', 'weekly', 'monthly', 'yearly'].forEach(p => {
-                document.getElementById('preset-' + p).className = PRESET_OFF;
+                document.getElementById('preset-' + p).className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
             });
-            document.getElementById('preset-' + preset).className = PRESET_ON;
+            document.getElementById('preset-' + preset).className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white";
 
             const now = new Date();
             if (preset === 'all') {
@@ -513,17 +634,17 @@
 
         function uncheckPresets() {
             ['all', 'weekly', 'monthly', 'yearly'].forEach(p => {
-                document.getElementById('preset-' + p).className = PRESET_OFF;
+                document.getElementById('preset-' + p).className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
             });
         }
 
-        /* ---------------- Data loading (no cache) ---------------- */
+        /* ------------------------------------------------------------------
+           Data loading
+        ------------------------------------------------------------------ */
 
         updateProgress(40, "Fetching data...");
 
-        const freshUrl = targetUrl + (targetUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
-
-        fetch(freshUrl, { cache: 'no-store' })
+        fetch(targetUrl)
             .then(response => response.text())
             .then(textData => {
                 updateProgress(80, "Processing dataset...");
@@ -543,6 +664,7 @@
                     return;
                 }
 
+                // Small badge in the bottom corner that fades out after 3 seconds
                 statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Loaded (${data.length} rows)`;
                 statusEl.className = "fixed bottom-1 right-2 z-50 text-[11px] bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl font-bold border border-emerald-500/20 shadow-lg flex items-center gap-2 transition-opacity duration-500";
                 setTimeout(() => {
@@ -552,9 +674,6 @@
 
                 rawData = data;
                 headers = Object.keys(rawData[0]).slice(0, 6);
-                detectDateOrder(rawData);
-                const badDates = rawData.filter(r => !getRowDate(r)).length;
-                if (badDates) console.warn(badDates + ' rows have an unreadable date');
                 extractFilters();
                 filteredData = rawData;
                 updateAll(filteredData);
@@ -597,7 +716,9 @@
             resetBtn.addEventListener('click', resetFilters);
         }
 
-        /* ---------------- Filtering / sorting ---------------- */
+        /* ------------------------------------------------------------------
+           Filtering / sorting
+        ------------------------------------------------------------------ */
 
         function filterAndRender() {
             let selectedUser = userFilterSelect.value;
@@ -617,16 +738,21 @@
                 let matchTask = selectedTasks.length === 0 || (row[taskKey] && selectedTasks.includes(row[taskKey].toString().trim()));
                 let matchSearch = !searchText || headers.some(h => getCellDisplay(row, h).toLowerCase().includes(searchText));
 
+                // Column-specific searches (prefix matching on the displayed value)
                 let matchColumnFilters = true;
                 for (let col in columnFilters) {
                     let colVal = columnFilters[col];
                     if (colVal && colVal.trim() !== '') {
                         let cellData = getCellDisplay(row, col).toLowerCase();
                         let query = colVal.toLowerCase().trim();
-                        if (!cellData.startsWith(query)) { matchColumnFilters = false; break; }
+                        if (!cellData.startsWith(query)) {
+                            matchColumnFilters = false;
+                            break;
+                        }
                     }
                 }
 
+                // Date range uses ONLY the Date column
                 let matchDate = true;
                 if (startDate || endDate) {
                     const d = getRowDate(row);
@@ -676,17 +802,9 @@
 
         function updateAll(data) {
             if (currentSortColumn) {
-                const isDateCol = currentSortColumn === getDateKey();
                 filteredData.sort((a, b) => {
-                    let valA, valB;
-                    if (isDateCol) {
-                        const da = getRowDate(a), db = getRowDate(b);
-                        valA = da ? da.getTime() : 0;
-                        valB = db ? db.getTime() : 0;
-                    } else {
-                        valA = a[currentSortColumn] !== undefined ? a[currentSortColumn] : '';
-                        valB = b[currentSortColumn] !== undefined ? b[currentSortColumn] : '';
-                    }
+                    let valA = a[currentSortColumn] !== undefined ? a[currentSortColumn] : '';
+                    let valB = b[currentSortColumn] !== undefined ? b[currentSortColumn] : '';
                     if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
                     if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
                     return 0;
@@ -696,7 +814,9 @@
             renderCharts(data);
         }
 
-        /* ---------------- Charts ---------------- */
+        /* ------------------------------------------------------------------
+           Charts
+        ------------------------------------------------------------------ */
 
         function renderCharts(data) {
             const isDark = document.documentElement.classList.contains('dark');
@@ -749,12 +869,15 @@
             );
         }
 
-        /* ---------------- Tables, KPI cards, leaderboard ---------------- */
+        /* ------------------------------------------------------------------
+           Tables, KPI cards, leaderboard
+        ------------------------------------------------------------------ */
 
         function renderTableAndCards(data) {
             const headTr = document.getElementById('table-head');
             const tbody = document.getElementById('table-body');
 
+            // Table header with column search inputs (no input for the image column)
             headTr.innerHTML = `
                 <tr>
                     <th class="p-3 font-bold">#</th>
@@ -779,6 +902,7 @@
             tbody.innerHTML = '';
             document.getElementById('stat-total').innerText = rawData.length;
 
+            // KPI counts: one date per row, from the Date column only
             const counts = computeCounts(data);
 
             let todayActivityMap = {};
@@ -819,6 +943,7 @@
             document.getElementById('stat-monthly').innerText = counts.monthly;
             document.getElementById('stat-yearly').innerText = counts.yearly;
 
+            // Leaderboard
             const leaderboardContainer = document.getElementById('leaderboard-container');
             leaderboardContainer.innerHTML = '';
             let sortedUsers = Object.keys(userCaseCounts).sort((a, b) => userCaseCounts[b] - userCaseCounts[a]);
@@ -850,6 +975,7 @@
                 });
             }
 
+            // Today's activity table header with sort indicators
             let userSortIndicator = todaySortColumn === 'user' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
             let taskSortIndicator = todaySortColumn === 'task' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
             let countSortIndicator = todaySortColumn === 'count' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
@@ -917,7 +1043,9 @@
             }
         }
 
-        /* ---------------- Export ---------------- */
+        /* ------------------------------------------------------------------
+           Export
+        ------------------------------------------------------------------ */
 
         function exportCSV() {
             if (filteredData.length === 0) return alert("No data to export!");
