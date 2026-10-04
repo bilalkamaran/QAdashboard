@@ -82,6 +82,7 @@
                 width: 100% !important;
             }
 
+            /* Sidebar becomes an off-canvas drawer on mobile */
             #sidebar {
                 position: fixed !important;
                 top: 0;
@@ -126,6 +127,7 @@
                 min-width: 0 !important;
             }
 
+            /* Header becomes a compact bar with a horizontally scrolling filter strip */
             header {
                 height: auto !important;
                 min-height: auto !important;
@@ -154,6 +156,7 @@
                 width: 100% !important;
             }
 
+            /* KPI cards: 2 per row on mobile */
             #page-dashboard > div.grid.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-5 {
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                 gap: 0.75rem !important;
@@ -183,11 +186,13 @@
     <!-- Main Container -->
     <div class="flex h-full w-full overflow-hidden">
 
+        <!-- Mobile-only backdrop, closes the sidebar drawer when tapped -->
         <div id="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
 
         <!-- Sidebar Navigation -->
         <aside id="sidebar" class="bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between p-4 z-20 h-full overflow-hidden shadow-2xl">
             <div class="space-y-6">
+                <!-- Brand Header -->
                 <div class="flex items-center gap-3 px-1 transition-all duration-300" id="sidebar-brand-box">
                     <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-black text-lg flex-shrink-0">
                         QA
@@ -198,6 +203,7 @@
                     </div>
                 </div>
 
+                <!-- Nav Links -->
                 <nav class="space-y-2">
                     <button onclick="switchPage('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25">
                         <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
@@ -270,23 +276,6 @@
                         <input type="date" id="end-date-input" class="bg-transparent text-slate-700 dark:text-slate-200 font-semibold focus:outline-none cursor-pointer" title="End Date">
                     </div>
 
-                    <!-- Day of Week Filter -->
-                    <div class="relative">
-                        <select id="day-filter-select" onchange="setDayFilter(this.value)" class="appearance-none bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 px-3.5 py-2.5 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm cursor-pointer">
-                            <option value="">هەموو ڕۆژەکان</option>
-                            <option value="6">شەممە</option>
-                            <option value="0">یەکشەممە</option>
-                            <option value="1">دووشەممە</option>
-                            <option value="2">سێشەممە</option>
-                            <option value="3">چوارشەممە</option>
-                            <option value="4">پێنجشەممە</option>
-                            <option value="5">هەینی</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                    </div>
-
                     <button id="reset-btn" class="px-3 py-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-rose-500/10 hover:text-rose-500 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all shadow-sm">Reset</button>
                 </div>
 
@@ -300,6 +289,7 @@
                 </div>
             </header>
 
+            <!-- Scrollable Content (pb-24 leaves room at the bottom so nothing is hidden) -->
             <div class="flex-1 overflow-y-auto p-6 pb-24 space-y-6">
 
                 <!-- PAGE 1: DASHBOARD -->
@@ -423,7 +413,7 @@
         </main>
     </div>
 
-    <!-- Status Badge -->
+    <!-- Status Badge (small, bottom corner, auto-hides after loading) -->
     <div id="status-el" class="fixed bottom-1 right-2 z-50 text-[11px] bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-bold border border-slate-200/80 dark:border-slate-800 shadow-lg flex items-center gap-2 transition-opacity duration-500">
         <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Connecting to server...
     </div>
@@ -440,15 +430,7 @@
 
         let currentSortColumn = null;
         let currentSortDirection = 'asc';
-        let columnFilters = {};
-
-        // Day of week filter: '' = all, or 0-6 (0 = Sunday)
-        let dayFilter = '';
-
-        function setDayFilter(v) {
-            dayFilter = v;
-            filterAndRender();
-        }
+        let columnFilters = {}; // Stores search inputs for each column
 
         let todaySortColumn = null;
         let todaySortDirection = 'asc';
@@ -512,47 +494,13 @@
             return text.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
 
-        // Reads all of these formats:
-        //   10/4/2026 11:15:44
-        //   10/4/2026 11:15:44 AM
-        //   10/4/2026 11:15:44 PM
         function parseCustomDate(val) {
             if (!val) return null;
-            if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
-
-            let s = val.toString()
-                .replace(/[\u00A0\u202F\u200E\u200F]/g, ' ')
-                .replace(/[٠-٩]/g, c => '٠١٢٣٤٥٦٧٨٩'.indexOf(c))
-                .replace(/[۰-۹]/g, c => '۰۱۲۳۴۵۶۷۸۹'.indexOf(c))
-                .replace(/\s+/g, ' ')
-                .trim();
-
-            let d = null;
-
-            // M/D/YYYY [HH:MM[:SS]] [AM|PM|A.M.|P.M.]
-            const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp])?\.?\s*[Mm]?\.?)?$/);
-
-            if (m) {
-                const a = +m[1], b = +m[2], y = +m[3];
-                let h = m[4] ? +m[4] : 0;
-                const mi = m[5] ? +m[5] : 0;
-                const sec = m[6] ? +m[6] : 0;
-                const ap = m[7] ? m[7].toUpperCase() : '';
-
-                if (ap === 'P' && h < 12) h += 12;
-                if (ap === 'A' && h === 12) h = 0;
-
-                let month = a, day = b;
-                if (a > 12) { day = a; month = b; }
-
-                d = new Date(y, month - 1, day, h, mi, sec);
-            } else {
-                d = new Date(s);
-            }
-
-            if (!d || isNaN(d.getTime())) return null;
-            const yr = d.getFullYear();
-            if (yr < 2000 || yr > 2100) return null;
+            let d = new Date(val);
+            if (isNaN(d.getTime())) return null;
+            // Sanity check so random numbers / IDs are never treated as dates
+            const y = d.getFullYear();
+            if (y < 2000 || y > 2100) return null;
             return d;
         }
 
@@ -572,7 +520,7 @@
         }
 
         /* ------------------------------------------------------------------
-           Every row has exactly ONE date, taken from the Date column only
+           KEY FIX: every row has exactly ONE date, taken from the Date column only
         ------------------------------------------------------------------ */
 
         let dateKeyCache = null;
@@ -591,6 +539,7 @@
             return parseCustomDate(row[key]);
         }
 
+        // Value shown in the table (nicely formatted date for the Date column)
         function getCellDisplay(row, h) {
             const v = row[h];
             if (v === undefined || v === null) return '';
@@ -615,7 +564,7 @@
 
             data.forEach((row, i) => {
                 const d = getRowDate(row);
-                if (!d || d > endOfToday) return;
+                if (!d || d > endOfToday) return; // ignore rows with no date or future dates
                 if (d.toDateString() === todayStr) { daily++; todayRows.add(i); }
                 if (d >= oneWeekAgo) weekly++;
                 if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) monthly++;
@@ -715,6 +664,7 @@
                     return;
                 }
 
+                // Small badge in the bottom corner that fades out after 3 seconds
                 statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Loaded (${data.length} rows)`;
                 statusEl.className = "fixed bottom-1 right-2 z-50 text-[11px] bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl font-bold border border-emerald-500/20 shadow-lg flex items-center gap-2 transition-opacity duration-500";
                 setTimeout(() => {
@@ -788,6 +738,7 @@
                 let matchTask = selectedTasks.length === 0 || (row[taskKey] && selectedTasks.includes(row[taskKey].toString().trim()));
                 let matchSearch = !searchText || headers.some(h => getCellDisplay(row, h).toLowerCase().includes(searchText));
 
+                // Column-specific searches (prefix matching on the displayed value)
                 let matchColumnFilters = true;
                 for (let col in columnFilters) {
                     let colVal = columnFilters[col];
@@ -801,20 +752,13 @@
                     }
                 }
 
-                // Day of week filter
-                let matchDay = true;
-                if (dayFilter !== '') {
-                    const dd = getRowDate(row);
-                    matchDay = !!dd && dd.getDay() === Number(dayFilter);
-                }
-
                 // Date range uses ONLY the Date column
                 let matchDate = true;
                 if (startDate || endDate) {
                     const d = getRowDate(row);
                     matchDate = !!d && (!startDate || d >= startDate) && (!endDate || d <= endDate);
                 }
-                return matchUser && matchTask && matchSearch && matchColumnFilters && matchDate && matchDay;
+                return matchUser && matchTask && matchSearch && matchColumnFilters && matchDate;
             });
 
             updateAll(filteredData);
@@ -826,8 +770,6 @@
             endDateInput.value = '';
             searchInput.value = '';
             columnFilters = {};
-            dayFilter = '';
-            document.getElementById('day-filter-select').value = '';
             document.querySelectorAll('.column-search-input').forEach(inp => inp.value = '');
             document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = false);
             taskLabel.innerText = "Tasks";
@@ -935,6 +877,7 @@
             const headTr = document.getElementById('table-head');
             const tbody = document.getElementById('table-body');
 
+            // Table header with column search inputs (no input for the image column)
             headTr.innerHTML = `
                 <tr>
                     <th class="p-3 font-bold">#</th>
@@ -959,6 +902,7 @@
             tbody.innerHTML = '';
             document.getElementById('stat-total').innerText = rawData.length;
 
+            // KPI counts: one date per row, from the Date column only
             const counts = computeCounts(data);
 
             let todayActivityMap = {};
@@ -1031,7 +975,7 @@
                 });
             }
 
-            // Today's activity table
+            // Today's activity table header with sort indicators
             let userSortIndicator = todaySortColumn === 'user' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
             let taskSortIndicator = todaySortColumn === 'task' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
             let countSortIndicator = todaySortColumn === 'count' ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
