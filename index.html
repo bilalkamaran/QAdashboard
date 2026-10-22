@@ -258,24 +258,50 @@ function getDateKey() {
   if (dateKeyCache && headers.includes(dateKeyCache)) return dateKeyCache;
   return dateKeyCache = headers.find(h => h.toLowerCase() === 'date') || headers.find(h => /date|time|created|stamp/i.test(h)) || null;
 }
-const getRowDate = row => { const k = getDateKey(); return k ? parseCustomDate(row[k]) : null; };
+// Parsed dates are cached per row so thousands of rows are not re-parsed on every update
+const dateCache = new WeakMap();
+const getRowDate = row => {
+  if (dateCache.has(row)) return dateCache.get(row);
+  const k = getDateKey(), d = k ? parseCustomDate(row[k]) : null;
+  dateCache.set(row, d); return d;
+};
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 // URLs (like the Image column) become clickable links
 const cellHtml = v => /^https?:\/\//i.test(v) ? `<a href="${esc(v)}" target="_blank" rel="noopener" style="color:var(--acc);font-weight:700">View link</a>` : esc(v);
 const cell = (row, h) => (row[h] === undefined || row[h] === null) ? '' : row[h].toString();
 
+/* Per-row cache (user, task, date parts, searchable text): computed once, then reused by every filter / KPI / chart */
+const metaCache = new WeakMap(), fmtCache = new Map();
+function fmt(t) {
+  let v = fmtCache.get(t);
+  if (v === undefined) { v = formatText(t); fmtCache.set(t, v); }
+  return v;
+}
+function meta(row) {
+  let m = metaCache.get(row);
+  if (!m) {
+    const d = getRowDate(row);
+    m = { u: (row[userKey] || '').toString().trim(), t: (row[taskKey] || '').toString().trim(), d: d, s: null };
+    if (d) { m.ts = d.getTime(); m.y = d.getFullYear(); m.mo = d.getMonth(); m.dt = d.getDate(); m.day = new Date(m.y, m.mo, m.dt).getTime(); }
+    metaCache.set(row, m);
+  }
+  return m;
+}
+const searchText = (row, m) => m.s !== null ? m.s : (m.s = headers.map(h => cell(row, h)).join('\u0001').toLowerCase());
+
 /* One pass: KPI counts + chart series */
 function compute(data) {
-  const now = new Date(), end = new Date(now); end.setHours(23, 59, 59, 999);
-  const weekAgo = new Date(now.getTime() - 7 * 864e5), todayStr = now.toDateString();
+  const now = new Date(), nowMs = now.getTime(), endMs = new Date(now).setHours(23, 59, 59, 999);
+  const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), weekAgo = nowMs - 7 * 864e5;
   const Y = now.getFullYear(), M = now.getMonth();
   const r = { daily: 0, weekly: 0, monthly: 0, yearly: 0, todayRows: new Set(),
     months: Array(12).fill(0), days: Array(new Date(Y, M + 1, 0).getDate()).fill(0), week: Array(7).fill(0) };
   data.forEach((row, i) => {
-    const d = getRowDate(row); if (!d || d > end) return;
-    if (d.toDateString() === todayStr) { r.daily++; r.todayRows.add(i); }
-    if (d >= weekAgo) r.weekly++;
-    if (d.getFullYear() === Y) { r.yearly++; r.months[d.getMonth()]++; if (d.getMonth() === M) { r.monthly++; r.days[d.getDate() - 1]++; } }
-    const diff = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+    const m = meta(row); if (!m.d || m.ts > endMs) return;
+    if (m.day === t0) { r.daily++; r.todayRows.add(i); }
+    if (m.ts >= weekAgo) r.weekly++;
+    if (m.y === Y) { r.yearly++; r.months[m.mo]++; if (m.mo === M) { r.monthly++; r.days[m.dt - 1]++; } }
+    const diff = Math.round((t0 - m.day) / 864e5);
     if (diff >= 0 && diff < 7) r.week[6 - diff]++;
   });
   return r;
@@ -288,6 +314,8 @@ function switchPage(p) {
   $('page-main').classList.toggle('hidden', p !== 'main');
   $('nav-dashboard').classList.toggle('on', p === 'dashboard');
   $('nav-main').classList.toggle('on', p === 'main');
+  if (p === 'main') renderTable();
+  if (p === 'dashboard' && dashDirty) renderDash();
 }
 taskBtn.addEventListener('click', () => taskMenu.classList.toggle('hidden'));
 document.addEventListener('click', e => { if (!taskBtn.contains(e.target) && !taskMenu.contains(e.target)) taskMenu.classList.add('hidden'); });
@@ -314,7 +342,7 @@ function loadData(silent) {
   if (!silent) progress(40, 'Fetching data...');
   else $('refresh-btn').classList.add('opacity-50');
   // Cache-busting parameter so the newest sheet data is always returned
-  const url = targetUrl + (targetUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+  const url = api('after=');
   return fetch(url).then(r => r.text()).then(text => {
   if (!silent) progress(80, 'Processing...');
   let data;
@@ -325,15 +353,12 @@ function loadData(silent) {
       progress(100, 'Failed'); return;
     }
     if (Array.isArray(j)) data = j;
+    else if (j.added && typeof j.added === 'object') { sheetMode = true; lastSig = j.sig; data = flattenSheets(j.added); }
     else if (Array.isArray(j.data)) data = j.data;
     else {
       // Object like { "Sheet1": [...], "Sheet2": [...] } -> merge every sheet into one list
       data = [];
-      sheetMode = true;
-      Object.keys(j || {}).forEach(sheet => {
-        if (EXCLUDED_SHEETS.includes(sheet.trim().toLowerCase())) return;
-        if (Array.isArray(j[sheet])) j[sheet].forEach(r => data.push(Object.assign({}, r, { Sheet: sheet })));
-      });
+      sheetMode = true; data = flattenSheets(j);
     }
   } catch (e) { data = Papa.parse(text, { header: true, skipEmptyLines: true }).data; }
 
@@ -385,18 +410,63 @@ const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTim
    Google Sheets cannot push to a website, so the page asks a tiny endpoint (?check=1) every few seconds.
    The full data is downloaded only when a new row was added to any user tab. */
 const LIVE_CHECK_MS = 10000;
-let lastSig = null;
+let lastSig = null;   // "tab:lastRow|tab:lastRow" signature of the data the page currently shows
+
+const api = q => targetUrl + (targetUrl.includes('?') ? '&' : '?') + q + '&t=' + Date.now();
+const sigMap = s => { const m = {}; (s || '').split('|').forEach(x => { if (!x) return; const i = x.lastIndexOf(':'); m[x.slice(0, i)] = +x.slice(i + 1) || 0; }); return m; };
+
+// { "tab": [rows] } -> one flat list, every row tagged with its tab name
+function flattenSheets(obj) {
+  const out = [];
+  Object.keys(obj || {}).forEach(sheet => {
+    if (EXCLUDED_SHEETS.includes(sheet.trim().toLowerCase()) || !Array.isArray(obj[sheet])) return;
+    obj[sheet].forEach(r => out.push(Object.assign({}, r, { Sheet: sheet })));
+  });
+  return out;
+}
 
 async function checkForChanges() {
-  if (document.hidden || isLoading || !rawData.length) return;
+  if (document.hidden || isLoading || !rawData.length || lastSig === null) return;
   try {
-    const r = await fetch(targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'check=1&t=' + Date.now());
-    const j = await r.json();
-    if (!j || j.sig === undefined) { clearInterval(refreshTimer); return; } // old script version: no live check available
-    const changed = lastSig !== null && j.sig !== lastSig;
-    lastSig = j.sig;
-    if (changed) await loadData(true);
+    const j = await (await fetch(api('check=1'))).json();
+    if (!j || j.sig === undefined || j.sig === lastSig) return;
+    await fetchAdded();
   } catch (e) { console.error(e); }
+}
+
+// Downloads ONLY the new rows and adds them to the data already on the page
+async function fetchAdded() {
+  isLoading = true;
+  try {
+    const j = await (await fetch(api('after=' + encodeURIComponent(lastSig)))).json();
+    if (!j || !j.added) return;
+    const before = sigMap(lastSig), now = sigMap(j.sig);
+    lastSig = j.sig;
+    // Rows were deleted somewhere: do a full reload so the page matches the sheet
+    if (Object.keys(before).some(k => !(k in now) || now[k] < before[k])) { isLoading = false; await loadData(true); return; }
+    const rows = flattenSheets(j.added);
+    if (rows.length) applyAdded(rows);
+  } catch (e) { console.error(e); } finally { isLoading = false; }
+}
+
+function addTaskOption(t) {
+  const l = document.createElement('label');
+  l.className = 'flex items-center gap-2.5 text-xs font-semibold cursor-pointer p-2 rounded-lg hover:bg-slate-500/10';
+  l.innerHTML = `<input type="checkbox" value="${esc(t)}" class="task-checkbox accent-teal-600"> ${esc(formatText(t))}`;
+  l.querySelector('input').addEventListener('change', filterAndRender);
+  taskMenu.appendChild(l);
+}
+
+function applyAdded(rows) {
+  rawData = rawData.concat(rows);
+  const known = new Set([...document.querySelectorAll('.task-checkbox')].map(c => c.value));
+  rows.forEach(r => {
+    const u = r[userKey] ? r[userKey].toString().trim() : '';
+    if (u) userTotals[u] = (userTotals[u] || 0) + 1;
+    const t = r[taskKey] ? r[taskKey].toString().trim() : '';
+    if (t && !known.has(t)) { known.add(t); addTaskOption(t); }
+  });
+  renderUsers(); filterAndRender(); stamp(); notifyNew(rows);
 }
 
 function startLiveWatch() {
@@ -475,7 +545,7 @@ function buildFilters() {
   document.querySelectorAll('.task-checkbox').forEach(cb => cb.addEventListener('change', filterAndRender));
   startIn.addEventListener('change', () => { markPreset(''); filterAndRender(); });
   endIn.addEventListener('change', () => { markPreset(''); filterAndRender(); });
-  searchIn.addEventListener('input', filterAndRender);
+  searchIn.addEventListener('input', debounce(filterAndRender, 250));
   $('reset-btn').addEventListener('click', resetFilters);
   $('u-search').addEventListener('input', renderUsers);
   renderUsers();
@@ -496,31 +566,35 @@ function renderUsers() {
       <span class="st flex-1 min-w-0 truncate text-[13px] font-semibold text-slate-200">${esc(formatText(n))}</span>
       <span class="st text-[11px] font-bold text-slate-500">${userTotals[n]}</span>
       <span class="st tick">✓</span>`;
-    el.addEventListener('click', () => { selectedUsers.has(n) ? selectedUsers.delete(n) : selectedUsers.add(n); renderUsers(); filterAndRender(); });
+    el.addEventListener('click', () => {
+      selectedUsers.has(n) ? selectedUsers.delete(n) : selectedUsers.add(n);
+      el.classList.toggle('sel');   // instant highlight, no list rebuild
+      scheduleFilter();             // several quick clicks are merged into one update
+    });
     list.appendChild(el);
   });
 }
+const scheduleFilter = debounce(filterAndRender, 60);
 function selectAllUsers() { Object.keys(userTotals).forEach(u => selectedUsers.add(u)); renderUsers(); filterAndRender(); }
 function clearUsers() { selectedUsers.clear(); renderUsers(); filterAndRender(); }
 
 function filterAndRender() {
+  tableLimit = 200;
   const start = parseInputDate(startIn.value), end = parseInputDate(endIn.value);
   if (end) end.setHours(23, 59, 59, 999);
   const q = searchIn.value.toLowerCase().trim();
-  const tasks = [...document.querySelectorAll('.task-checkbox:checked')].map(c => c.value);
-  $('task-label').innerText = tasks.length ? tasks.length + ' tasks' : 'Tasks';
+  const tasks = new Set([...document.querySelectorAll('.task-checkbox:checked')].map(c => c.value));
+  $('task-label').innerText = tasks.size ? tasks.size + ' tasks' : 'Tasks';
+  const colFilters = Object.keys(columnFilters).map(k => [k, (columnFilters[k] || '').trim().toLowerCase()]).filter(x => x[1]);
 
   filteredData = rawData.filter(row => {
-    if (selectedUsers.size && !selectedUsers.has((row[userKey] || '').toString().trim())) return false;
-    if (tasks.length && !tasks.includes((row[taskKey] || '').toString().trim())) return false;
-    if (q && !headers.some(h => cell(row, h).toLowerCase().includes(q))) return false;
-    for (const col in columnFilters) {
-      const v = (columnFilters[col] || '').trim().toLowerCase();
-      if (v && !cell(row, col).toLowerCase().startsWith(v)) return false;
-    }
+    const m = meta(row);
+    if (selectedUsers.size && !selectedUsers.has(m.u)) return false;
+    if (tasks.size && !tasks.has(m.t)) return false;
+    if (q && !searchText(row, m).includes(q)) return false;
+    for (let i = 0; i < colFilters.length; i++) if (!cell(row, colFilters[i][0]).toLowerCase().startsWith(colFilters[i][1])) return false;
     if (start || end) {
-      const d = getRowDate(row);
-      if (!d || (start && d < start) || (end && d > end)) return false;
+      if (!m.d || (start && m.d < start) || (end && m.d > end)) return false;
     }
     return true;
   });
@@ -543,20 +617,31 @@ function sortToday(c) {
   if (todaySortCol === c) todaySortDir = todaySortDir === 'asc' ? 'desc' : 'asc'; else { todaySortCol = c; todaySortDir = 'asc'; }
   updateAll();
 }
-function handleColumnSearch(col, v) { columnFilters[col] = v; filterAndRender(); }
+const runColumnFilter = debounce(filterAndRender, 250);
+function handleColumnSearch(col, v) { columnFilters[col] = v; runColumnFilter(); }
 
 /* ---------- Rendering ---------- */
+let dashDirty = false;
 function updateAll() {
   if (sortCol) {
     const isDate = sortCol === getDateKey();
     filteredData.sort((a, b) => {
       let x, y;
-      if (isDate) { x = (parseCustomDate(a[sortCol]) || 0) * 1; y = (parseCustomDate(b[sortCol]) || 0) * 1; }
+      if (isDate) { x = (getRowDate(a) || 0) * 1; y = (getRowDate(b) || 0) * 1; }
       else { x = a[sortCol] ?? ''; y = b[sortCol] ?? ''; }
       return x < y ? (sortDir === 'asc' ? -1 : 1) : x > y ? (sortDir === 'asc' ? 1 : -1) : 0;
     });
   }
-  renderScope(); renderTable(); renderKpisAndBoard(); renderCharts(filteredData);
+  renderScope();
+  // Only the page that is visible gets drawn; the other one is drawn when you switch to it
+  if (!$('page-main').classList.contains('hidden')) renderTable();
+  if (!$('page-dashboard').classList.contains('hidden')) renderDash(); else dashDirty = true;
+}
+function renderDash() {
+  dashDirty = false;
+  const c = compute(filteredData);
+  renderKpisAndBoard(c);
+  renderCharts(filteredData, c);
 }
 
 function renderScope() {
@@ -578,27 +663,35 @@ function renderHead() {
   }).join('')}</tr>`;
 }
 
+let tableLimit = 200;   // only this many rows are drawn at once (thousands of rows make the page slow)
 function renderTable() {
   const tb = $('table-body'), frag = document.createDocumentFragment();
-  filteredData.forEach((row, i) => {
+  const shown = filteredData.slice(0, tableLimit);
+  shown.forEach((row, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td class="font-bold opacity-40">${i + 1}</td>` + headers.map(h => `<td>${cellHtml(cell(row, h))}</td>`).join('');
     frag.appendChild(tr);
   });
   tb.innerHTML = '';
-  if (!filteredData.length) tb.innerHTML = `<tr><td colspan="${headers.length + 1}" class="text-center opacity-50 !py-8">No records match the current filters.</td></tr>`;
-  else tb.appendChild(frag);
+  if (!filteredData.length) { tb.innerHTML = `<tr><td colspan="${headers.length + 1}" class="text-center opacity-50 !py-8">No records match the current filters.</td></tr>`; return; }
+  tb.appendChild(frag);
+  if (filteredData.length > tableLimit) {
+    const left = filteredData.length - tableLimit;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="${headers.length + 1}" class="text-center !py-4"><button class="btn" onclick="tableLimit += 200; renderTable()">Show 200 more (${left} remaining)</button></td>`;
+    tb.appendChild(tr);
+  }
 }
 
-function renderKpisAndBoard() {
-  const c = compute(filteredData);
+function renderKpisAndBoard(c) {
   $('stat-total').innerText = filteredData.length;
   $('stat-daily').innerText = c.daily; $('stat-weekly').innerText = c.weekly;
   $('stat-monthly').innerText = c.monthly; $('stat-yearly').innerText = c.yearly;
 
   const perUser = {}, todayMap = {};
   filteredData.forEach((row, i) => {
-    const u = row[userKey] ? formatText(row[userKey]) : 'Unknown', t = row[taskKey] ? formatText(row[taskKey]) : 'General';
+    const m = meta(row);
+    const u = m.u ? fmt(m.u) : 'Unknown', t = m.t ? fmt(m.t) : 'General';
     perUser[u] = (perUser[u] || 0) + 1;
     if (c.todayRows.has(i)) { const k = u + '___' + t; todayMap[k] = (todayMap[k] || 0) + 1; }
   });
@@ -630,21 +723,26 @@ function renderKpisAndBoard() {
     : `<tr><td colspan="4" class="text-center opacity-50 !py-6">No activity recorded today.</td></tr>`;
 }
 
-function renderCharts(data) {
+let lastDark = null;
+function renderCharts(data, c) {
   if (!headers.length) return;
+  c = c || compute(data);
   const dark = document.documentElement.classList.contains('dark');
   const tc = dark ? '#8b98b0' : '#64748b', gc = dark ? '#1b2437' : '#e5e9f1';
-  const c = compute(data), now = new Date();
-  const opts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+  if (lastDark !== dark) { Object.values(charts).forEach(ch => ch.destroy()); charts = {}; lastDark = dark; } // theme changed: rebuild
+  const now = new Date();
+  const opts = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
     scales: { y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, precision: 0 } }, x: { grid: { display: false }, ticks: { color: tc } } } };
+  // Existing charts are updated in place (no destroy / re-create, no animation) = much faster
   const make = (id, type, labels, values, color) => {
-    if (charts[id]) charts[id].destroy();
+    const ch = charts[id];
+    if (ch) { ch.data.labels = labels; ch.data.datasets[0].data = values; ch.update('none'); return; }
     charts[id] = new Chart($(id).getContext('2d'), { type, data: { labels, datasets: [{ data: values, borderColor: color, backgroundColor: type === 'bar' ? color + 'cc' : color + '22',
       fill: true, tension: .35, borderWidth: 2.5, pointRadius: 3, borderRadius: 6 }] }, options: opts });
   };
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const week = [...Array(7)].map((_, i) => { const d = new Date(now.getTime() - (6 - i) * 864e5); return d.toLocaleDateString('en-US', { weekday: 'short' }); });
-  const tc2 = {}; data.forEach(r => { if (r[taskKey]) { const t = formatText(r[taskKey]); tc2[t] = (tc2[t] || 0) + 1; } });
+  const week = [...Array(7)].map((_, i) => new Date(now.getTime() - (6 - i) * 864e5).toLocaleDateString('en-US', { weekday: 'short' }));
+  const tc2 = {}; data.forEach(r => { const t = meta(r).t; if (t) { const f = fmt(t); tc2[f] = (tc2[f] || 0) + 1; } });
   make('yearlyChart', 'line', months, c.months, '#f59e0b');
   make('monthlyChart', 'line', c.days.map((_, i) => i + 1), c.days, '#4f46e5');
   make('weeklyChart', 'line', week, c.week, '#8b5cf6');
