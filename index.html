@@ -124,10 +124,6 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
     <button id="reset-btn" class="btn">Reset</button>
   </div>
   <div class="flex items-center gap-2 flex-shrink-0 frow">
-    <select id="auto-refresh" class="ctl cursor-pointer" title="Auto refresh" onchange="setAutoRefresh(this.value)">
-      <option value="0">Auto refresh: off</option><option value="30">Every 30 sec</option><option value="60" selected>Every 1 min</option><option value="300">Every 5 min</option>
-    </select>
-    <button class="btn" id="notify-btn" onclick="toggleNotify()" title="Alerts for new cases">🔔 On</button>
     <button class="btn" id="refresh-btn" onclick="loadData(true)" title="Refresh now">⟳ Refresh</button>
     <button class="btn" onclick="document.documentElement.classList.toggle('dark');renderCharts(filteredData)" title="Toggle theme">◐</button>
     <button class="btn" onclick="exportCSV()">CSV</button>
@@ -193,13 +189,12 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
 </main>
 </div>
 
-<div id="toasts" class="fixed top-20 right-4 z-[60] space-y-2 w-80 max-w-[calc(100vw-2rem)]"></div>
 <div id="status-el" class="fixed bottom-2 right-3 z-50 text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-2 transition-opacity duration-500 card">
   <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Connecting to server...
 </div>
 
 <script>
-const targetUrl = 'https://script.google.com/macros/s/AKfycbzTPrf8fa_EB9jRek6T7u-A_dj1aVbcrEwxz_WOoydLnkMRd-hN561SuqOD43U2WVJe/exec';
+const targetUrl = 'https://script.google.com/macros/s/AKfycbz0V2hziwVZG0tAS7jXcLFcrrXKtSlazwQCZBImuP-K__emYfoqSW5NPsyS03f4TCgC/exec';
 // 'MDY' => 10/4/2026 is October 4  |  'DMY' => 10/4/2026 is 10 April
 const DATE_ORDER = 'MDY';
 const MAX_COLUMNS = 7;
@@ -386,9 +381,28 @@ function loadData(silent) {
 
 const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTimeString('en-GB'); };
 
-function setAutoRefresh(sec) {
+/* ---------- Live updates ----------
+   Google Sheets cannot push to a website, so the page asks a tiny endpoint (?check=1) every few seconds.
+   The full data is downloaded only when a new row was added to any user tab. */
+const LIVE_CHECK_MS = 10000;
+let lastSig = null;
+
+async function checkForChanges() {
+  if (document.hidden || isLoading || !rawData.length) return;
+  try {
+    const r = await fetch(targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'check=1&t=' + Date.now());
+    const j = await r.json();
+    if (!j || j.sig === undefined) { clearInterval(refreshTimer); return; } // old script version: no live check available
+    const changed = lastSig !== null && j.sig !== lastSig;
+    lastSig = j.sig;
+    if (changed) await loadData(true);
+  } catch (e) { console.error(e); }
+}
+
+function startLiveWatch() {
   clearInterval(refreshTimer);
-  if (+sec > 0) refreshTimer = setInterval(() => { if (!document.hidden) loadData(true); }, sec * 1000);
+  refreshTimer = setInterval(checkForChanges, LIVE_CHECK_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForChanges(); });
 }
 
 // Applies fresh data without resetting the user's filters, sort order or selected users
@@ -414,8 +428,8 @@ function applyRefresh(data) {
   if (fresh.length) notifyNew(fresh);
 }
 
-/* ---------- New case alerts ---------- */
-let notifyOn = true, newCount = 0;
+/* ---------- New case counter (tab title only) ---------- */
+let newCount = 0;
 const BASE_TITLE = document.title;
 const sig = r => JSON.stringify(r);
 
@@ -428,45 +442,14 @@ function findNewRows(oldData, newData) {
   return out;
 }
 
-function toggleNotify() {
-  notifyOn = !notifyOn;
-  $('notify-btn').innerText = notifyOn ? '🔔 On' : '🔕 Off';
-  if (notifyOn && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission();
-}
-
-function beep() {
-  try {
-    const ac = new (window.AudioContext || window.webkitAudioContext)(), o = ac.createOscillator(), g = ac.createGain();
-    o.type = 'sine'; o.frequency.value = 880; g.gain.setValueAtTime(.12, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + .35);
-    o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + .35);
-  } catch (e) { /* sound is optional */ }
-}
-
+// New cases only add a counter to the browser tab title while the tab is in the background
 function notifyNew(rows) {
-  if (!notifyOn) return;
-  const lines = rows.slice(0, 4).map(r => `${formatText(r[userKey] || 'Unknown')} · ${formatText(r[taskKey] || 'General')}`);
-  const title = `${rows.length} new case${rows.length > 1 ? 's' : ''}`;
-  if (rows.length > 4) lines.push(`+${rows.length - 4} more`);
-
-  const t = document.createElement('div');
-  t.className = 'card p-4 cursor-pointer';
-  t.style.borderLeft = '4px solid var(--acc)';
-  t.innerHTML = `<div class="h-sec">${esc(title)}</div><div class="sub mt-1.5 space-y-0.5">${lines.map(l => `<div>${esc(l)}</div>`).join('')}</div>`;
-  t.addEventListener('click', () => t.remove());
-  $('toasts').appendChild(t);
-  setTimeout(() => t.remove(), 9000);
-
-  beep();
-  if (document.hidden) {
-    newCount += rows.length; document.title = `(${newCount}) ${BASE_TITLE}`;
-    if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body: lines.join('\n') });
-  }
+  if (document.hidden) { newCount += rows.length; document.title = `(${newCount}) ${BASE_TITLE}`; }
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { newCount = 0; document.title = BASE_TITLE; } });
 
 loadData(false);
-setAutoRefresh(60);
+startLiveWatch();
 
 function warn(msg) {
   window.__keep = true; statusEl.style.opacity = '1'; statusEl.style.pointerEvents = 'auto';
