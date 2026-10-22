@@ -199,11 +199,14 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
 </div>
 
 <script>
-const targetUrl = 'https://script.google.com/macros/s/AKfycbwePSbdzzsWDsLGLvLsa2jo_dxRRLjcV7XPIlEKmULam9vEPlk5JtzE7s5snMDdZXR3/exec';
+const targetUrl = 'https://script.google.com/macros/s/AKfycbx83DAv6Q60ymliucWQj2SRyF7-vzNiNvRQpRAwjtToRMqs73_mE1EjYu9ungPvHULn/exec';
 // 'MDY' => 10/4/2026 is October 4  |  'DMY' => 10/4/2026 is 10 April
 const DATE_ORDER = 'MDY';
 const MAX_COLUMNS = 7;
 
+// Sheet tabs that must never be treated as a user (compared in lower case)
+const EXCLUDED_SHEETS = ['dashboard'];
+let sheetMode = false;   // true when the server returns one list of rows per sheet tab (one tab = one user)
 let rawData = [], filteredData = [], headers = [];
 let userKey = '', taskKey = '';
 let userTotals = {};              // total cases per user (all data)
@@ -329,7 +332,11 @@ function loadData(silent) {
     else {
       // Object like { "Sheet1": [...], "Sheet2": [...] } -> merge every sheet into one list
       data = [];
-      Object.keys(j || {}).forEach(sheet => { if (Array.isArray(j[sheet])) j[sheet].forEach(r => data.push(Object.assign({}, r, { Sheet: sheet }))); });
+      sheetMode = true;
+      Object.keys(j || {}).forEach(sheet => {
+        if (EXCLUDED_SHEETS.includes(sheet.trim().toLowerCase())) return;
+        if (Array.isArray(j[sheet])) j[sheet].forEach(r => data.push(Object.assign({}, r, { Sheet: sheet })));
+      });
     }
   } catch (e) { data = Papa.parse(text, { header: true, skipEmptyLines: true }).data; }
 
@@ -343,9 +350,11 @@ function loadData(silent) {
   setTimeout(() => { if (!window.__keep) { statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none'; } }, 3000);
 
   rawData = data;
-  headers = Object.keys(rawData[0]).slice(0, MAX_COLUMNS);
+  headers = Object.keys(rawData[0]).filter(k => k !== 'Sheet').slice(0, MAX_COLUMNS - 1);
   taskKey = headers.length > 1 ? headers[1] : headers[0];
   userKey = headers.find(h => /name|user/i.test(h)) || headers[0];
+  // In sheet mode every tab is a user, so the tab name is the user and always shown as a column
+  if (sheetMode) { headers.push('Sheet'); userKey = 'Sheet'; }
   buildFilters();
   renderHead();
   filteredData = rawData;
