@@ -199,7 +199,7 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
 </div>
 
 <script>
-const targetUrl = 'https://script.google.com/macros/s/AKfycbyonoXNYMl55FzR_D3XWwbt5gtT_8QyHCpJGz_1sJKhgb6ph765ZKpu-pifOh9dbdDg/exec';
+const targetUrl = 'https://script.google.com/macros/s/AKfycbzTPrf8fa_EB9jRek6T7u-A_dj1aVbcrEwxz_WOoydLnkMRd-hN561SuqOD43U2WVJe/exec';
 // 'MDY' => 10/4/2026 is October 4  |  'DMY' => 10/4/2026 is 10 April
 const DATE_ORDER = 'MDY';
 const MAX_COLUMNS = 7;
@@ -352,7 +352,16 @@ function loadData(silent) {
   setTimeout(() => { if (!window.__keep) { statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none'; } }, 3000);
 
   rawData = data;
-  headers = Object.keys(rawData[0]).filter(k => k !== 'Sheet').slice(0, MAX_COLUMNS - 1);
+  if (sheetMode) {
+    // Show every column found in any tab (in sheet order); columns that are empty everywhere are hidden
+    const used = new Set(), seen = new Set(); headers = [];
+    rawData.forEach(r => { for (const k in r) {
+      if (k === 'Sheet') continue;
+      if (r[k] !== '' && r[k] != null) used.add(k);
+      if (!seen.has(k)) { seen.add(k); headers.push(k); }
+    } });
+    headers = headers.filter(k => used.has(k));
+  } else headers = Object.keys(rawData[0]).slice(0, MAX_COLUMNS);
   taskKey = headers.length > 1 ? headers[1] : headers[0];
   userKey = headers.find(h => /name|user/i.test(h)) || headers[0];
   // In sheet mode every tab is a user, so the tab name is the user and always shown as a column
