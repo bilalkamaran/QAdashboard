@@ -199,7 +199,7 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
 </div>
 
 <script>
-const targetUrl = 'https://script.google.com/macros/s/AKfycbx83DAv6Q60ymliucWQj2SRyF7-vzNiNvRQpRAwjtToRMqs73_mE1EjYu9ungPvHULn/exec';
+const targetUrl = 'https://script.google.com/macros/s/AKfycbyonoXNYMl55FzR_D3XWwbt5gtT_8QyHCpJGz_1sJKhgb6ph765ZKpu-pifOh9dbdDg/exec';
 // 'MDY' => 10/4/2026 is October 4  |  'DMY' => 10/4/2026 is 10 April
 const DATE_ORDER = 'MDY';
 const MAX_COLUMNS = 7;
@@ -264,6 +264,8 @@ function getDateKey() {
   return dateKeyCache = headers.find(h => h.toLowerCase() === 'date') || headers.find(h => /date|time|created|stamp/i.test(h)) || null;
 }
 const getRowDate = row => { const k = getDateKey(); return k ? parseCustomDate(row[k]) : null; };
+// URLs (like the Image column) become clickable links
+const cellHtml = v => /^https?:\/\//i.test(v) ? `<a href="${esc(v)}" target="_blank" rel="noopener" style="color:var(--acc);font-weight:700">View link</a>` : esc(v);
 const cell = (row, h) => (row[h] === undefined || row[h] === null) ? '' : row[h].toString();
 
 /* One pass: KPI counts + chart series */
@@ -588,7 +590,7 @@ function renderTable() {
   const tb = $('table-body'), frag = document.createDocumentFragment();
   filteredData.forEach((row, i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="font-bold opacity-40">${i + 1}</td>` + headers.map(h => `<td>${esc(cell(row, h))}</td>`).join('');
+    tr.innerHTML = `<td class="font-bold opacity-40">${i + 1}</td>` + headers.map(h => `<td>${cellHtml(cell(row, h))}</td>`).join('');
     frag.appendChild(tr);
   });
   tb.innerHTML = '';
