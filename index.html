@@ -4,11 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AppSheet QA Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://script.google.com">
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config = { darkMode: 'class' }</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f3f5f9;--card:#fff;--line:#e5e9f1;--ink:#0f1629;--mute:#64748b;--acc:#0d9488;--acc2:#4f46e5;--side:#0b1120}
@@ -124,7 +126,6 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
     <button id="reset-btn" class="btn">Reset</button>
   </div>
   <div class="flex items-center gap-2 flex-shrink-0 frow">
-    <button class="btn" id="refresh-btn" onclick="loadData(true)" title="Refresh now">⟳ Refresh</button>
     <button class="btn" onclick="document.documentElement.classList.toggle('dark');renderCharts(filteredData)" title="Toggle theme">◐</button>
     <button class="btn" onclick="exportCSV()">CSV</button>
     <button class="btn" onclick="exportExcel()">Excel</button>
@@ -369,7 +370,6 @@ function loadData(silent) {
   if (isLoading) return;
   isLoading = true;
   if (!silent) progress(40, 'Fetching data...');
-  else $('refresh-btn').classList.add('opacity-50');
   // Cache-busting parameter so the newest sheet data is always returned
   const url = api('after=');
   return fetchT(url).then(r => r.text()).then(text => {
@@ -421,7 +421,7 @@ function loadData(silent) {
   if (silent) { console.error(err); $('ptext').innerText = 'Refresh failed, retrying'; return; }
   progress(100, 'Failed'); statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Connection error, retrying...`; console.error(err);
   if (!rawData.length) setTimeout(() => loadData(false), 5000);
-}).finally(() => { isLoading = false; $('refresh-btn').classList.remove('opacity-50'); });
+}).finally(() => { isLoading = false; });
 }
 
 const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTimeString('en-GB'); saveCache(); };
@@ -500,7 +500,8 @@ function startLiveWatch() {
 
 // Applies fresh data without resetting the user's filters, sort order or selected users
 function applyRefresh(data) {
-  const fresh = findNewRows(rawData, data);
+  // Comparing every row is heavy, so it only runs when the tab is in the background (for the title counter)
+  const fresh = document.hidden ? findNewRows(rawData, data) : [];
   const checked = new Set([...document.querySelectorAll('.task-checkbox:checked')].map(c => c.value));
   rawData = data; userTotals = {};
   const tasks = new Set();
@@ -805,7 +806,7 @@ const cacheGet = async () => { try { const db = await idb(); return await new Pr
 const saveCache = debounce(async () => {
   if (!rawData.length) return;
   try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').put({ sheetMode, sig: lastSig, data: rawData }, 'data'); } catch (e) {}
-}, 1500);
+}, 300);
 
 function saveUI() {
   try { localStorage.setItem('qa-ui', JSON.stringify({ users: [...selectedUsers], start: startIn.value, end: endIn.value,
@@ -818,18 +819,26 @@ function restoreUI() {
   } catch (e) {}
 }
 
-(async function start() {
+async function start() {
   restoreUI();
   const c = await cacheGet();
   if (c && c.data && c.data.length) {
-    sheetMode = c.sheetMode; lastSig = c.sig; initData(c.data);
+    sheetMode = c.sheetMode; lastSig = c.sig;
+    initData(c.data);                      // data is shown immediately
     progress(100, 'Saved data, updating...');
     statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Showing saved data, updating...`;
-    await loadData(true);                       // silent: keeps filters, scroll and selection
-    statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none';
-  } else loadData(false);
-  startLiveWatch();
-})();
+    startLiveWatch();
+    // refresh in the background, without waiting for it
+    Promise.resolve(loadData(true)).finally(() => {
+      statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none';
+    });
+  } else {
+    loadData(false);
+    startLiveWatch();
+  }
+}
+// the deferred scripts (Chart, Papa, XLSX) are ready before DOMContentLoaded fires
+document.addEventListener('DOMContentLoaded', start);
 </script>
 </body>
 </html>
