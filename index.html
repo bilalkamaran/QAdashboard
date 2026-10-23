@@ -179,7 +179,7 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
 <div id="page-main" class="hidden">
   <div class="card overflow-hidden">
     <div class="p-5 border-b" style="border-color:var(--line)"><div class="h-sec">Records explorer</div><div class="sub">Click a column title to sort. Type under a title to filter.</div></div>
-    <div class="overflow-auto max-h-[640px]"><table class="w-full text-left text-xs">
+    <div id="table-wrap" class="overflow-auto max-h-[640px]"><table class="w-full text-left text-xs">
       <thead id="table-head" class="sticky top-0 z-10 select-none" style="background:var(--card)"></thead>
       <tbody id="table-body"></tbody></table></div>
   </div>
@@ -362,11 +362,19 @@ function loadData(silent) {
     }
   } catch (e) { data = Papa.parse(text, { header: true, skipEmptyLines: true }).data; }
 
+  // FIX: even when there are no records yet, keep watching so the first record appears live
+  if (lastSig === null) lastSig = '';
+
   if (!data || !data.length) {
-    if (silent) return; statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> No records found`; return; }
+    if (silent) return;
+    progress(100, 'Waiting for data');
+    statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> No records yet, waiting...`;
+    return;
+  }
 
   if (silent) { applyRefresh(data); return; }
   progress(100, 'Up to date'); stamp();
+  statusEl.style.opacity = '1'; statusEl.style.pointerEvents = 'auto';
   statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Loaded ${data.length} rows`;
   window.__keep = false;
   setTimeout(() => { if (!window.__keep) { statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none'; } }, 3000);
@@ -382,6 +390,7 @@ function loadData(silent) {
     } });
     headers = headers.filter(k => used.has(k));
   } else headers = Object.keys(rawData[0]).slice(0, MAX_COLUMNS);
+  dateKeyCache = null;
   taskKey = headers.length > 1 ? headers[1] : headers[0];
   userKey = headers.find(h => /name|user/i.test(h)) || headers[0];
   // In sheet mode every tab is a user, so the tab name is the user and always shown as a column
@@ -426,7 +435,8 @@ function flattenSheets(obj) {
 }
 
 async function checkForChanges() {
-  if (document.hidden || isLoading || !rawData.length || lastSig === null) return;
+  // FIX: no "!rawData.length" check, so changes are also detected when the sheet started empty
+  if (document.hidden || isLoading || lastSig === null) return;
   try {
     const j = await (await fetch(api('check=1'))).json();
     if (!j || j.sig === undefined || j.sig === lastSig) return;
@@ -436,6 +446,8 @@ async function checkForChanges() {
 
 // Downloads ONLY the new rows and adds them to the data already on the page
 async function fetchAdded() {
+  // FIX: first rows ever arrived -> one proper initial load (headers, users, tasks)
+  if (!rawData.length) { await loadData(false); return; }
   isLoading = true;
   try {
     const j = await (await fetch(api('after=' + encodeURIComponent(lastSig)))).json();
@@ -518,15 +530,13 @@ function notifyNew(rows) {
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { newCount = 0; document.title = BASE_TITLE; } });
 
-loadData(false);
-startLiveWatch();
-
 function warn(msg) {
   window.__keep = true; statusEl.style.opacity = '1'; statusEl.style.pointerEvents = 'auto';
   statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> ${msg}`;
 }
 
 /* ---------- Filters ---------- */
+let listenersBound = false;
 function buildFilters() {
   const tasks = new Set();
   userTotals = {};
@@ -543,18 +553,24 @@ function buildFilters() {
     taskMenu.appendChild(l);
   });
   document.querySelectorAll('.task-checkbox').forEach(cb => cb.addEventListener('change', filterAndRender));
-  startIn.addEventListener('change', () => { markPreset(''); filterAndRender(); });
-  endIn.addEventListener('change', () => { markPreset(''); filterAndRender(); });
-  searchIn.addEventListener('input', debounce(filterAndRender, 250));
-  $('reset-btn').addEventListener('click', resetFilters);
-  $('u-search').addEventListener('input', renderUsers);
+  // Bound only once, so a second initial load never adds duplicate listeners
+  if (!listenersBound) {
+    listenersBound = true;
+    startIn.addEventListener('change', () => { markPreset(''); filterAndRender(); });
+    endIn.addEventListener('change', () => { markPreset(''); filterAndRender(); });
+    searchIn.addEventListener('input', debounce(filterAndRender, 250));
+    $('reset-btn').addEventListener('click', resetFilters);
+    $('u-search').addEventListener('input', renderUsers);
+  }
   renderUsers();
 }
 
 /* Sidebar users: click one by one, or select all */
 function renderUsers() {
   const q = $('u-search').value.toLowerCase().trim();
-  const list = $('ulist'); list.innerHTML = '';
+  const list = $('ulist');
+  const keepScroll = list.scrollTop;   // FIX: remember the scroll position
+  list.innerHTML = '';
   const names = Object.keys(userTotals).sort((a, b) => userTotals[b] - userTotals[a]).filter(n => !q || n.toLowerCase().includes(q));
   $('u-total').innerText = `(${Object.keys(userTotals).length})`;
   if (!names.length) { list.innerHTML = '<div class="st text-xs text-slate-500 text-center py-4">No users found</div>'; return; }
@@ -573,6 +589,7 @@ function renderUsers() {
     });
     list.appendChild(el);
   });
+  list.scrollTop = keepScroll;      // FIX: restore the scroll position
 }
 const scheduleFilter = debounce(filterAndRender, 60);
 function selectAllUsers() { Object.keys(userTotals).forEach(u => selectedUsers.add(u)); renderUsers(); filterAndRender(); }
@@ -665,6 +682,8 @@ function renderHead() {
 
 let tableLimit = Infinity;   // show ALL rows (set a number like 500 to limit again if the page gets slow)
 function renderTable() {
+  const wrap = $('table-wrap');
+  const keepTop = wrap.scrollTop, keepLeft = wrap.scrollLeft;   // FIX: remember the table scroll
   const tb = $('table-body'), frag = document.createDocumentFragment();
   const shown = filteredData.slice(0, tableLimit);
   shown.forEach((row, i) => {
@@ -673,14 +692,18 @@ function renderTable() {
     frag.appendChild(tr);
   });
   tb.innerHTML = '';
-  if (!filteredData.length) { tb.innerHTML = `<tr><td colspan="${headers.length + 1}" class="text-center opacity-50 !py-8">No records match the current filters.</td></tr>`; return; }
-  tb.appendChild(frag);
-  if (filteredData.length > tableLimit) {
-    const left = filteredData.length - tableLimit;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="${headers.length + 1}" class="text-center !py-4"><button class="btn" onclick="tableLimit += 200; renderTable()">Show 200 more (${left} remaining)</button></td>`;
-    tb.appendChild(tr);
+  if (!filteredData.length) {
+    tb.innerHTML = `<tr><td colspan="${headers.length + 1}" class="text-center opacity-50 !py-8">No records match the current filters.</td></tr>`;
+  } else {
+    tb.appendChild(frag);
+    if (filteredData.length > tableLimit) {
+      const left = filteredData.length - tableLimit;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="${headers.length + 1}" class="text-center !py-4"><button class="btn" onclick="tableLimit += 200; renderTable()">Show 200 more (${left} remaining)</button></td>`;
+      tb.appendChild(tr);
+    }
   }
+  wrap.scrollTop = keepTop; wrap.scrollLeft = keepLeft;          // FIX: restore the table scroll
 }
 
 function renderKpisAndBoard(c) {
@@ -762,6 +785,10 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredData), 'QA Data');
   XLSX.writeFile(wb, 'AppSheet_QA_Export.xlsx');
 }
+
+/* ---------- Start ---------- */
+loadData(false);
+startLiveWatch();
 </script>
 </body>
 </html>
