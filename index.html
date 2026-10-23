@@ -579,7 +579,7 @@ function selectAllUsers() { Object.keys(userTotals).forEach(u => selectedUsers.a
 function clearUsers() { selectedUsers.clear(); renderUsers(); filterAndRender(); }
 
 function filterAndRender() {
-  tableLimit = 200;
+  tableLimit = Infinity;   // always show every matching row
   const start = parseInputDate(startIn.value), end = parseInputDate(endIn.value);
   if (end) end.setHours(23, 59, 59, 999);
   const q = searchIn.value.toLowerCase().trim();
@@ -663,7 +663,7 @@ function renderHead() {
   }).join('')}</tr>`;
 }
 
-let tableLimit = 200;   // only this many rows are drawn at once (thousands of rows make the page slow)
+let tableLimit = Infinity;   // show ALL rows (set a number like 500 to limit again if the page gets slow)
 function renderTable() {
   const tb = $('table-body'), frag = document.createDocumentFragment();
   const shown = filteredData.slice(0, tableLimit);
