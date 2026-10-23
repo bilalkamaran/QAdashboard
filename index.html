@@ -360,7 +360,7 @@ function initData(data) {
 }
 
 // fetch that gives up after 25 s (slow mobile networks / Apps Script cold start)
-function fetchT(url, ms = 25000) {
+function fetchT(url, ms = 60000) {
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
   return fetch(url, { signal: ac.signal }).finally(() => clearTimeout(t));
 }
@@ -418,7 +418,7 @@ function loadData(silent) {
     if (bad) warn(`${bad} of ${rawData.length} rows have an unreadable date. Example: "${esc(sample)}"`);
   }
 }).catch(err => {
-  if (silent) { console.error(err); $('ptext').innerText = 'Refresh failed, retrying'; return; }
+  if (silent) { console.error(err); $('ptext').innerText = 'Refresh failed, retrying'; setTimeout(() => loadData(true), 5000); return; }
   progress(100, 'Failed'); statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Connection error, retrying...`; console.error(err);
   if (!rawData.length) setTimeout(() => loadData(false), 5000);
 }).finally(() => { isLoading = false; });
@@ -461,15 +461,32 @@ async function fetchAdded() {
   if (!rawData.length) { await loadData(false); return; }
   isLoading = true;
   try {
-    const j = await (await fetch(api('after=' + encodeURIComponent(lastSig)))).json();
+    const j = await (await fetchT(api('after=' + encodeURIComponent(lastSig)))).json();
     if (!j || !j.added) return;
     const before = sigMap(lastSig), now = sigMap(j.sig);
-    lastSig = j.sig;
     // Rows were deleted somewhere: do a full reload so the page matches the sheet
     if (Object.keys(before).some(k => !(k in now) || now[k] < before[k])) { isLoading = false; await loadData(true); return; }
+    lastSig = j.sig;
     const rows = flattenSheets(j.added);
     if (rows.length) applyAdded(rows);
-  } catch (e) { console.error(e); } finally { isLoading = false; }
+  } finally { isLoading = false; }
+}
+
+// Used right after the page starts from saved data: downloads only new rows, retries if it fails
+async function syncSaved(tries = 0) {
+  try {
+    await fetchAdded();
+    stamp();
+    statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none';
+  } catch (e) {
+    console.error(e);
+    if (tries < 6) {
+      $('ptext').innerText = 'Refresh failed, retrying';
+      setTimeout(() => syncSaved(tries + 1), 3000 * (tries + 1));
+    } else {
+      statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Could not update. Showing saved data`;
+    }
+  }
 }
 
 function addTaskOption(t) {
@@ -828,8 +845,9 @@ async function start() {
     progress(100, 'Saved data, updating...');
     statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Showing saved data, updating...`;
     startLiveWatch();
-    // refresh in the background, without waiting for it
-    Promise.resolve(loadData(true)).finally(() => {
+    // background update: only the NEW rows are downloaded when the saved signature exists
+    if (lastSig) syncSaved();
+    else Promise.resolve(loadData(true)).finally(() => {
       statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none';
     });
   } else {
