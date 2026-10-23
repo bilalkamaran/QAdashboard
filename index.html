@@ -309,6 +309,7 @@ function compute(data) {
 
 /* ---------- Navigation ---------- */
 function switchPage(p) {
+  try { localStorage.setItem('qa-page', p); } catch (e) {}
   if (isMobile()) closeMobile();
   $('page-dashboard').classList.toggle('hidden', p !== 'dashboard');
   $('page-main').classList.toggle('hidden', p !== 'main');
@@ -335,6 +336,34 @@ function setPreset(p) {
 /* ---------- Data loading ---------- */
 let refreshTimer = null, isLoading = false;
 
+function initData(data) {
+  rawData = data;
+  if (sheetMode) {
+    // Show every column found in any tab (in sheet order); columns that are empty everywhere are hidden
+    const used = new Set(), seen = new Set(); headers = [];
+    rawData.forEach(r => { for (const k in r) {
+      if (k === 'Sheet') continue;
+      if (r[k] !== '' && r[k] != null) used.add(k);
+      if (!seen.has(k)) { seen.add(k); headers.push(k); }
+    } });
+    headers = headers.filter(k => used.has(k));
+  } else headers = Object.keys(rawData[0]).slice(0, MAX_COLUMNS);
+  dateKeyCache = null;
+  taskKey = headers.length > 1 ? headers[1] : headers[0];
+  userKey = headers.find(h => /name|user/i.test(h)) || headers[0];
+  // In sheet mode every tab is a user, so the tab name is the user and always shown as a column
+  if (sheetMode) { headers.push('Sheet'); userKey = 'Sheet'; }
+  buildFilters();
+  renderHead();
+  filterAndRender();   // re-applies restored filters / selected users
+}
+
+// fetch that gives up after 25 s (slow mobile networks / Apps Script cold start)
+function fetchT(url, ms = 25000) {
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
+  return fetch(url, { signal: ac.signal }).finally(() => clearTimeout(t));
+}
+
 // silent = true: background refresh that keeps filters, sorting and the current page
 function loadData(silent) {
   if (isLoading) return;
@@ -343,7 +372,7 @@ function loadData(silent) {
   else $('refresh-btn').classList.add('opacity-50');
   // Cache-busting parameter so the newest sheet data is always returned
   const url = api('after=');
-  return fetch(url).then(r => r.text()).then(text => {
+  return fetchT(url).then(r => r.text()).then(text => {
   if (!silent) progress(80, 'Processing...');
   let data;
   try {
@@ -379,26 +408,7 @@ function loadData(silent) {
   window.__keep = false;
   setTimeout(() => { if (!window.__keep) { statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none'; } }, 3000);
 
-  rawData = data;
-  if (sheetMode) {
-    // Show every column found in any tab (in sheet order); columns that are empty everywhere are hidden
-    const used = new Set(), seen = new Set(); headers = [];
-    rawData.forEach(r => { for (const k in r) {
-      if (k === 'Sheet') continue;
-      if (r[k] !== '' && r[k] != null) used.add(k);
-      if (!seen.has(k)) { seen.add(k); headers.push(k); }
-    } });
-    headers = headers.filter(k => used.has(k));
-  } else headers = Object.keys(rawData[0]).slice(0, MAX_COLUMNS);
-  dateKeyCache = null;
-  taskKey = headers.length > 1 ? headers[1] : headers[0];
-  userKey = headers.find(h => /name|user/i.test(h)) || headers[0];
-  // In sheet mode every tab is a user, so the tab name is the user and always shown as a column
-  if (sheetMode) { headers.push('Sheet'); userKey = 'Sheet'; }
-  buildFilters();
-  renderHead();
-  filteredData = rawData;
-  updateAll();
+  initData(data);
 
   const dk = getDateKey();
   if (!dk) warn(`No date column found. Columns: ${headers.join(', ')}`);
@@ -409,11 +419,12 @@ function loadData(silent) {
   }
 }).catch(err => {
   if (silent) { console.error(err); $('ptext').innerText = 'Refresh failed, retrying'; return; }
-  progress(100, 'Failed'); statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Connection error`; console.error(err);
+  progress(100, 'Failed'); statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Connection error, retrying...`; console.error(err);
+  if (!rawData.length) setTimeout(() => loadData(false), 5000);
 }).finally(() => { isLoading = false; $('refresh-btn').classList.remove('opacity-50'); });
 }
 
-const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTimeString('en-GB'); };
+const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTimeString('en-GB'); saveCache(); };
 
 /* ---------- Live updates ----------
    Google Sheets cannot push to a website, so the page asks a tiny endpoint (?check=1) every few seconds.
@@ -596,7 +607,8 @@ function selectAllUsers() { Object.keys(userTotals).forEach(u => selectedUsers.a
 function clearUsers() { selectedUsers.clear(); renderUsers(); filterAndRender(); }
 
 function filterAndRender() {
-  tableLimit = Infinity;   // always show every matching row
+  saveUI();
+  tableLimit = PAGE_ROWS;
   const start = parseInputDate(startIn.value), end = parseInputDate(endIn.value);
   if (end) end.setHours(23, 59, 59, 999);
   const q = searchIn.value.toLowerCase().trim();
@@ -680,30 +692,29 @@ function renderHead() {
   }).join('')}</tr>`;
 }
 
-let tableLimit = Infinity;   // show ALL rows (set a number like 500 to limit again if the page gets slow)
+const PAGE_ROWS = isMobile() ? 100 : 300;   // rows drawn at once; the rest load with the buttons under the table
+let tableLimit = PAGE_ROWS;
 function renderTable() {
   const wrap = $('table-wrap');
-  const keepTop = wrap.scrollTop, keepLeft = wrap.scrollLeft;   // FIX: remember the table scroll
-  const tb = $('table-body'), frag = document.createDocumentFragment();
-  const shown = filteredData.slice(0, tableLimit);
-  shown.forEach((row, i) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="font-bold opacity-40">${i + 1}</td>` + headers.map(h => `<td>${cellHtml(cell(row, h))}</td>`).join('');
-    frag.appendChild(tr);
-  });
-  tb.innerHTML = '';
+  const keepTop = wrap.scrollTop, keepLeft = wrap.scrollLeft;
+  const tb = $('table-body'), cols = headers.length + 1;
   if (!filteredData.length) {
-    tb.innerHTML = `<tr><td colspan="${headers.length + 1}" class="text-center opacity-50 !py-8">No records match the current filters.</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="${cols}" class="text-center opacity-50 !py-8">No records match the current filters.</td></tr>`;
   } else {
-    tb.appendChild(frag);
-    if (filteredData.length > tableLimit) {
-      const left = filteredData.length - tableLimit;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="${headers.length + 1}" class="text-center !py-4"><button class="btn" onclick="tableLimit += 200; renderTable()">Show 200 more (${left} remaining)</button></td>`;
-      tb.appendChild(tr);
+    // One string + one innerHTML: far lighter on phones than creating thousands of elements
+    const rows = [];
+    const n = Math.min(filteredData.length, tableLimit);
+    for (let i = 0; i < n; i++) {
+      const row = filteredData[i];
+      rows.push(`<tr><td class="font-bold opacity-40">${i + 1}</td>` + headers.map(h => `<td>${cellHtml(cell(row, h))}</td>`).join('') + '</tr>');
     }
+    if (filteredData.length > n) {
+      const left = filteredData.length - n;
+      rows.push(`<tr><td colspan="${cols}" class="text-center !py-4"><button class="btn" onclick="tableLimit += PAGE_ROWS; renderTable()">Show ${Math.min(PAGE_ROWS, left)} more (${left} remaining)</button> <button class="btn" onclick="tableLimit = Infinity; renderTable()">Show all</button></td></tr>`);
+    }
+    tb.innerHTML = rows.join('');
   }
-  wrap.scrollTop = keepTop; wrap.scrollLeft = keepLeft;          // FIX: restore the table scroll
+  wrap.scrollTop = keepTop; wrap.scrollLeft = keepLeft;
 }
 
 function renderKpisAndBoard(c) {
@@ -787,8 +798,38 @@ function exportExcel() {
 }
 
 /* ---------- Start ---------- */
-loadData(false);
-startLiveWatch();
+/* ---------- Mobile browsers often discard a background tab and reload it.
+   The last data and your filters are kept on the device, so the page comes back instantly. ---------- */
+const idb = () => new Promise((res, rej) => { const r = indexedDB.open('qa-dash', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const cacheGet = async () => { try { const db = await idb(); return await new Promise(res => { const q = db.transaction('kv').objectStore('kv').get('data'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); } catch (e) { return null; } };
+const saveCache = debounce(async () => {
+  if (!rawData.length) return;
+  try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').put({ sheetMode, sig: lastSig, data: rawData }, 'data'); } catch (e) {}
+}, 1500);
+
+function saveUI() {
+  try { localStorage.setItem('qa-ui', JSON.stringify({ users: [...selectedUsers], start: startIn.value, end: endIn.value,
+    preset: document.querySelector('#presets button.on')?.dataset.p || '', q: searchIn.value })); } catch (e) {}
+}
+function restoreUI() {
+  try {
+    const u = JSON.parse(localStorage.getItem('qa-ui') || 'null');
+    if (u) { selectedUsers = new Set(u.users || []); startIn.value = u.start || ''; endIn.value = u.end || ''; searchIn.value = u.q || ''; markPreset(u.preset || ''); }
+  } catch (e) {}
+}
+
+(async function start() {
+  restoreUI();
+  const c = await cacheGet();
+  if (c && c.data && c.data.length) {
+    sheetMode = c.sheetMode; lastSig = c.sig; initData(c.data);
+    progress(100, 'Saved data, updating...');
+    statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Showing saved data, updating...`;
+    await loadData(true);                       // silent: keeps filters, scroll and selection
+    statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none';
+  } else loadData(false);
+  startLiveWatch();
+})();
 </script>
 </body>
 </html>
