@@ -3,942 +3,765 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AppSheet QA Advanced Dashboard</title>
+<title>AppSheet QA Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = { darkMode: 'class', theme: { extend: { colors: { dark: { 950: '#090d16', 900: '#0f172a', 800: '#1e293b', 700: '#334155' } } } } }
-</script>
+<script>tailwind.config = { darkMode: 'class' }</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-body { font-family: 'Plus Jakarta Sans', sans-serif; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-.dark ::-webkit-scrollbar-track { background: #090d16; }
-.dark ::-webkit-scrollbar-thumb { background: #1e293b; }
-#sidebar { width: 280px; min-width: 280px; transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1); }
-#sidebar.collapsed { width: 80px !important; min-width: 80px !important; }
-#sidebar.collapsed .sidebar-text { display: none !important; }
-#sidebar.collapsed #sidebar-brand-box { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-#sidebar.collapsed nav button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-.glass-card { background: rgba(255,255,255,.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.4); }
-.dark .glass-card { background: rgba(15,23,42,.75); border: 1px solid rgba(255,255,255,.08); }
-#sidebar-backdrop { display: none; }
-@media screen and (max-width: 768px) {
-    html, body { overflow-x: hidden !important; width: 100% !important; }
-    #sidebar { position: fixed !important; top: 0; left: 0; bottom: 0; width: 260px !important; min-width: 260px !important; transform: translateX(-100%); transition: transform .3s cubic-bezier(.4,0,.2,1) !important; z-index: 40; }
-    #sidebar.mobile-open { transform: translateX(0); }
-    #sidebar.collapsed { width: 260px !important; min-width: 260px !important; }
-    #sidebar.collapsed .sidebar-text { display: block !important; }
-    #sidebar.collapsed #sidebar-brand-box { justify-content: flex-start !important; padding-left: .25rem !important; }
-    #sidebar.collapsed nav button { justify-content: flex-start !important; padding-left: .875rem !important; }
-    #sidebar-backdrop.mobile-open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 30; }
-    main { padding: 0 !important; width: 100% !important; min-width: 0 !important; }
-    header { height: auto !important; min-height: auto !important; padding: 10px 12px !important; flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
-    header > div.flex.items-center.gap-3.flex-wrap { flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; padding-bottom: 4px; scrollbar-width: none; }
-    header > div.flex.items-center.gap-3.flex-wrap::-webkit-scrollbar { display: none; }
-    header > div.flex.items-center.gap-3.flex-wrap > * { flex-shrink: 0 !important; }
-    header input#search-input { width: 9rem !important; }
-    header .flex.items-center.gap-2.flex-shrink-0 { justify-content: flex-end !important; flex-wrap: wrap !important; width: 100% !important; }
-    #page-dashboard > div.grid.grid-cols-1 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: .75rem !important; }
-    .overflow-x-auto { width: 100% !important; -webkit-overflow-scrolling: touch; }
-    #status-el { left: 12px; right: 12px; bottom: 4px; justify-content: center; }
+:root{--bg:#f3f5f9;--card:#fff;--line:#e5e9f1;--ink:#0f1629;--mute:#64748b;--acc:#0d9488;--acc2:#4f46e5;--side:#0b1120}
+.dark{--bg:#070b14;--card:#0f1626;--line:#1b2437;--ink:#e8edf6;--mute:#8b98b0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink)}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#94a3b855;border-radius:9px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 1px 2px rgba(15,22,41,.04),0 8px 24px -12px rgba(15,22,41,.10)}
+.ctl{background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:12px;font-weight:600;color:var(--ink);padding:9px 12px;outline:none;transition:.15s}
+.ctl:focus{border-color:var(--acc);box-shadow:0 0 0 3px #0d948822}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:12px;font-weight:700;padding:9px 14px;transition:.15s;color:var(--ink)}
+.btn:hover{border-color:var(--acc);color:var(--acc)}
+.btn-pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn-pri:hover{background:#0f766e;color:#fff}
+.seg{display:flex;gap:2px;padding:3px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.seg button{padding:6px 12px;border-radius:9px;font-size:12px;font-weight:700;color:var(--mute);transition:.15s}
+.seg button.on{background:var(--acc);color:#fff}
+.h-sec{font-size:13px;font-weight:800;letter-spacing:-.01em}
+.sub{font-size:11px;color:var(--mute);font-weight:500}
+/* Sidebar */
+#sidebar{width:290px;min-width:290px;background:var(--side);color:#cbd5e1;transition:width .3s,min-width .3s}
+#sidebar.collapsed{width:76px;min-width:76px}
+#sidebar.collapsed .st{display:none!important}
+#sidebar.collapsed .navb,#sidebar.collapsed .uitem{justify-content:center;padding-left:0;padding-right:0}
+.navb{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border-radius:12px;font-size:13px;font-weight:700;color:#94a3b8;transition:.15s}
+.navb:hover{background:#ffffff0d;color:#fff}
+.navb.on{background:linear-gradient(135deg,#0d9488,#4f46e5);color:#fff;box-shadow:0 8px 20px -8px #0d9488aa}
+.uitem{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:12px;cursor:pointer;transition:.15s;border:1px solid transparent}
+.uitem:hover{background:#ffffff0a}
+.uitem.sel{background:#0d948822;border-color:#0d948855}
+.uitem input{display:none}
+.av{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
+.tick{width:16px;height:16px;border-radius:5px;border:1.5px solid #475569;display:grid;place-items:center;flex-shrink:0;font-size:10px;color:transparent}
+.uitem.sel .tick{background:var(--acc);border-color:var(--acc);color:#fff}
+.mini{font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;background:#ffffff0f;color:#cbd5e1}.mini:hover{background:#ffffff1f;color:#fff}
+#ulist{overflow-y:auto;flex:1;min-height:0}
+.kpi{padding:18px 20px;position:relative;overflow:hidden}
+.kpi:before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:0 4px 4px 0;background:var(--k)}
+.kpi b{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.1;display:block;margin-top:8px}
+table th{padding:12px 14px;font-weight:700;color:var(--mute);font-size:11px;white-space:nowrap}
+table td{padding:11px 14px;white-space:nowrap}
+tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
+.chip{display:inline-flex;align-items:center;gap:6px;background:#0d948818;color:var(--acc);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700}
+#sbk{display:none}
+@media (max-width:768px){
+ #sidebar{position:fixed;top:0;left:0;bottom:0;width:280px!important;min-width:280px!important;transform:translateX(-100%);transition:transform .3s;z-index:40}
+ #sidebar.mobile-open{transform:none}
+ #sidebar.collapsed .st{display:revert!important}
+ #sbk.open{display:block;position:fixed;inset:0;background:#0008;z-index:30}
+ header{flex-direction:column;align-items:stretch!important;height:auto!important;padding:10px 12px!important}
+ .frow{flex-wrap:nowrap!important;overflow-x:auto;padding-bottom:4px}.frow>*{flex-shrink:0}
+ #kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+@media print{#sidebar,header,#status-el{display:none!important}body{overflow:visible;height:auto}}
 </style>
 </head>
-<body class="bg-slate-100 text-slate-900 dark:bg-dark-950 dark:text-slate-100 h-screen overflow-hidden flex flex-col antialiased transition-colors duration-300">
-
-<div id="progress-container" class="fixed top-0 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-900 z-50 overflow-hidden">
-    <div id="progress-bar" class="h-full bg-blue-600 transition-all duration-300 w-0"></div>
-</div>
+<body class="h-screen overflow-hidden flex flex-col antialiased">
+<div id="pbar" class="fixed top-0 left-0 h-1 z-50 transition-all duration-300" style="width:0;background:linear-gradient(90deg,#0d9488,#4f46e5)"></div>
 
 <div class="flex h-full w-full overflow-hidden">
-    <div id="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
+<div id="sbk" onclick="closeMobile()"></div>
 
-    <aside id="sidebar" class="bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between p-4 z-20 h-full overflow-hidden shadow-2xl">
-        <div class="space-y-6">
-            <div class="flex items-center gap-3 px-1 transition-all duration-300" id="sidebar-brand-box">
-                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-black text-lg flex-shrink-0">QA</div>
-                <div class="sidebar-text whitespace-nowrap overflow-hidden transition-all duration-300">
-                    <h1 class="font-extrabold text-sm tracking-tight">AppSheet QA</h1>
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Enterprise Control Hub</p>
-                </div>
-            </div>
-            <nav class="space-y-2">
-                <button onclick="switchPage('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                    <span class="sidebar-text whitespace-nowrap overflow-hidden">Overview Dashboard</span>
-                </button>
-                <button onclick="switchPage('main')" id="nav-main" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    <span class="sidebar-text whitespace-nowrap overflow-hidden">Data Records Explorer</span>
-                </button>
-            </nav>
-        </div>
-        <div class="space-y-3 overflow-hidden bg-slate-50 dark:bg-dark-950/50 p-3 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 sidebar-text">
-            <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-bold">
-                <span id="progress-text">System Ready</span>
-                <span id="progress-percent" class="text-blue-500">100%</span>
-            </div>
-        </div>
-    </aside>
+<!-- SIDEBAR -->
+<aside id="sidebar" class="flex flex-col p-4 gap-5 h-full z-20">
+  <div class="flex items-center gap-3 px-1">
+    <div class="w-10 h-10 rounded-xl grid place-items-center text-white font-extrabold flex-shrink-0" style="background:linear-gradient(135deg,#0d9488,#4f46e5)">QA</div>
+    <div class="st"><div class="text-sm font-extrabold text-white">AppSheet QA</div><div class="text-[11px] text-slate-400">Quality control hub</div></div>
+  </div>
 
-    <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100/70 dark:bg-dark-950 transition-colors duration-300 relative">
+  <nav class="space-y-1.5">
+    <button class="navb on" id="nav-dashboard" onclick="switchPage('dashboard')">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+      <span class="st">Overview</span></button>
+    <button class="navb" id="nav-main" onclick="switchPage('main')">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+      <span class="st">Data Records</span></button>
+  </nav>
 
-        <header class="h-20 min-h-[80px] border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-dark-900/40 backdrop-blur-xl px-6 flex items-center justify-between z-10 transition-colors duration-300 gap-4 shadow-sm">
-            <div class="flex items-center gap-3 flex-wrap">
-                <button onclick="toggleSidebar()" class="p-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 transition-all shadow-sm flex-shrink-0" title="Toggle Sidebar">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
+  <!-- USERS PANEL -->
+  <div class="flex flex-col flex-1 min-h-0 gap-2.5">
+    <div class="st flex items-center justify-between px-1">
+      <span class="text-[11px] font-bold text-slate-400">Team members <span id="u-total" class="text-slate-500"></span></span>
+      <span class="flex gap-1.5"><button class="mini" onclick="selectAllUsers()">Select all</button><button class="mini" onclick="clearUsers()">Clear</button></span>
+    </div>
+    <input id="u-search" class="st w-full text-xs font-semibold text-white placeholder-slate-500 px-3 py-2 rounded-xl outline-none" style="background:#ffffff0d;border:1px solid #ffffff12" placeholder="Find a user...">
+    <div id="ulist" class="space-y-1"></div>
+  </div>
 
-                <div class="flex items-center bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-700/80 p-1 rounded-xl shadow-sm gap-1">
-                    <button onclick="setDatePreset('all')" id="preset-all" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white">All</button>
-                    <button onclick="setDatePreset('weekly')" id="preset-weekly" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Weekly</button>
-                    <button onclick="setDatePreset('monthly')" id="preset-monthly" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Monthly</button>
-                    <button onclick="setDatePreset('yearly')" id="preset-yearly" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Yearly</button>
-                </div>
+  <div class="st flex items-center justify-between text-[11px] font-bold text-slate-400 px-2 pt-3 border-t" style="border-color:#ffffff12">
+    <span id="ptext">Starting...</span><span id="ppct" style="color:#2dd4bf">0%</span>
+  </div>
+</aside>
 
-                <div class="relative">
-                    <input type="text" id="search-input" placeholder="Search database..." class="bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 px-4 py-2.5 pl-9 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm w-40">
-                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </div>
+<!-- MAIN -->
+<main class="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+<header class="min-h-[76px] px-6 py-3 flex items-center justify-between gap-4 z-10 border-b" style="background:var(--card);border-color:var(--line)">
+  <div class="frow flex items-center gap-2.5 flex-wrap">
+    <button class="btn !px-3" onclick="toggleSidebar()" title="Toggle sidebar"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <div class="seg" id="presets">
+      <button data-p="all" class="on" onclick="setPreset('all')">All</button>
+      <button data-p="weekly" onclick="setPreset('weekly')">Weekly</button>
+      <button data-p="monthly" onclick="setPreset('monthly')">Monthly</button>
+      <button data-p="yearly" onclick="setPreset('yearly')">Yearly</button>
+    </div>
+    <input id="search-input" class="ctl w-44" placeholder="Search records...">
+    <div class="relative">
+      <button id="task-btn" class="ctl flex items-center gap-2"><span id="task-label">Tasks</span><span class="text-[9px] opacity-50">▼</span></button>
+      <div id="task-menu" class="hidden absolute left-0 mt-2 w-64 card p-2 z-50 max-h-60 overflow-y-auto"></div>
+    </div>
+    <div class="ctl flex items-center gap-1.5 !py-1.5">
+      <input type="date" id="start-date-input" class="bg-transparent outline-none" title="Start date">
+      <span class="opacity-40">–</span>
+      <input type="date" id="end-date-input" class="bg-transparent outline-none" title="End date">
+    </div>
+    <button id="reset-btn" class="btn">Reset</button>
+  </div>
+  <div class="flex items-center gap-2 flex-shrink-0 frow">
+    <button class="btn" id="refresh-btn" onclick="loadData(true)" title="Refresh now">⟳ Refresh</button>
+    <button class="btn" onclick="document.documentElement.classList.toggle('dark');renderCharts(filteredData)" title="Toggle theme">◐</button>
+    <button class="btn" onclick="exportCSV()">CSV</button>
+    <button class="btn" onclick="exportExcel()">Excel</button>
+    <button class="btn btn-pri" onclick="window.print()">Print / PDF</button>
+  </div>
+</header>
 
-                <div class="relative">
-                    <button id="task-btn" class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 transition-all shadow-sm">
-                        <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                        <span id="task-label">Tasks</span>
-                        <svg class="w-3 h-3 ml-1 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div id="task-menu" class="hidden absolute left-0 mt-2 w-64 bg-white dark:bg-dark-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-3 z-50 space-y-1.5 max-h-60 overflow-y-auto"></div>
-                </div>
+<div class="flex-1 overflow-y-auto p-6 pb-24">
 
-                <div class="relative">
-                    <select id="user-filter-select" class="appearance-none bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 px-3.5 py-2.5 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm cursor-pointer">
-                        <option value="">All Users</option>
-                    </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
-                    </div>
-                </div>
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="space-y-6">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div><h2 class="text-xl font-extrabold tracking-tight">Performance overview</h2>
+    <div class="sub mt-1" id="scope-line">Showing all users</div></div>
+    <div id="scope-chips" class="flex flex-wrap gap-1.5"></div>
+  </div>
 
-                <div class="flex items-center gap-1.5 bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-700/80 px-3 py-1.5 rounded-xl text-xs shadow-sm">
-                    <input type="date" id="start-date-input" class="bg-transparent text-slate-700 dark:text-slate-200 font-semibold focus:outline-none cursor-pointer" title="Start Date">
-                    <span class="text-slate-400 font-bold">-</span>
-                    <input type="date" id="end-date-input" class="bg-transparent text-slate-700 dark:text-slate-200 font-semibold focus:outline-none cursor-pointer" title="End Date">
-                </div>
+  <div id="kpis" class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+    <div class="card kpi" style="--k:#64748b"><span class="sub">Total rows</span><b id="stat-total">0</b></div>
+    <div class="card kpi" style="--k:#10b981"><span class="sub">Today</span><b id="stat-daily">0</b></div>
+    <div class="card kpi" style="--k:#8b5cf6"><span class="sub">Last 7 days</span><b id="stat-weekly">0</b></div>
+    <div class="card kpi" style="--k:#4f46e5"><span class="sub">This month</span><b id="stat-monthly">0</b></div>
+    <div class="card kpi" style="--k:#f59e0b"><span class="sub">This year</span><b id="stat-yearly">0</b></div>
+  </div>
 
-                <button id="reset-btn" class="px-3 py-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-rose-500/10 hover:text-rose-500 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all shadow-sm">Reset</button>
-            </div>
+  <div class="card overflow-hidden">
+    <div class="p-5 flex items-center justify-between border-b" style="border-color:var(--line)">
+      <div><div class="h-sec">Leaderboard</div><div class="sub">Cases per user in the current selection</div></div>
+      <span class="chip">Live</span>
+    </div>
+    <div id="leaderboard-container" class="p-5 grid gap-2.5 md:grid-cols-2"></div>
+  </div>
 
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-yellow-400 transition-all shadow-sm" title="Toggle Theme">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                </button>
-                <button onclick="exportCSV()" class="px-3.5 py-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all shadow-sm">CSV</button>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card p-5"><div class="h-sec">This year, by month</div><div class="sub mb-3">Cases logged per month</div><div class="h-64"><canvas id="yearlyChart"></canvas></div></div>
+    <div class="card p-5"><div class="h-sec">This month, by day</div><div class="sub mb-3">Cases logged per day</div><div class="h-64"><canvas id="monthlyChart"></canvas></div></div>
+    <div class="card p-5"><div class="h-sec">Last 7 days</div><div class="sub mb-3">Daily trend</div><div class="h-64"><canvas id="weeklyChart"></canvas></div></div>
+    <div class="card p-5"><div class="h-sec">Tasks distribution</div><div class="sub mb-3">Cases per task</div><div class="h-64"><canvas id="taskChart"></canvas></div></div>
+  </div>
 
-                <!-- Excel export menu -->
-                <div class="relative">
-                    <button onclick="toggleExcelMenu(event)" class="px-3.5 py-2.5 rounded-xl bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all shadow-sm">Excel ▾</button>
-                    <div id="excel-menu" class="hidden absolute right-0 mt-2 w-72 bg-white dark:bg-dark-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 z-50 space-y-1">
-                        <button onclick="exportExcel('all-sheets')" class="w-full text-left p-3 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">📚 All data, one sheet per user</button>
-                        <button onclick="exportExcel('view-sheets')" class="w-full text-left p-3 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">🎯 Current filter, one sheet per user</button>
-                        <button onclick="exportExcel('single')" class="w-full text-left p-3 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">📄 Current filter, single sheet</button>
-                    </div>
-                </div>
-
-                <button onclick="exportPDF()" class="px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white shadow-lg shadow-blue-500/20 transition-all">Print / PDF</button>
-            </div>
-        </header>
-
-        <div class="flex-1 overflow-y-auto p-6 pb-24 space-y-6">
-
-            <!-- PAGE 1: DASHBOARD -->
-            <div id="page-dashboard" class="space-y-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
-                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Rows</span>
-                        <div class="flex items-baseline justify-between mt-3">
-                            <span id="stat-total" class="text-2xl font-black text-slate-900 dark:text-white">0</span>
-                            <span class="text-[9px] font-extrabold bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-lg">Database</span>
-                        </div>
-                    </div>
-                    <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
-                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Daily</span>
-                        <div class="flex items-baseline justify-between mt-3">
-                            <span id="stat-daily" class="text-2xl font-black text-emerald-500">0</span>
-                            <span class="text-[9px] font-extrabold bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-lg">Today</span>
-                        </div>
-                    </div>
-                    <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
-                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Weekly</span>
-                        <div class="flex items-baseline justify-between mt-3">
-                            <span id="stat-weekly" class="text-2xl font-black text-purple-500">0</span>
-                            <span class="text-[9px] font-extrabold bg-purple-500/10 text-purple-500 px-2 py-0.5 rounded-lg">7 Days</span>
-                        </div>
-                    </div>
-                    <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
-                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Monthly</span>
-                        <div class="flex items-baseline justify-between mt-3">
-                            <span id="stat-monthly" class="text-2xl font-black text-indigo-500">0</span>
-                            <span class="text-[9px] font-extrabold bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded-lg">Month</span>
-                        </div>
-                    </div>
-                    <div class="glass-card p-5 rounded-3xl shadow-xl flex flex-col justify-between transition-all hover:scale-[1.02]">
-                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Yearly</span>
-                        <div class="flex items-baseline justify-between mt-3">
-                            <span id="stat-yearly" class="text-2xl font-black text-amber-500">0</span>
-                            <span class="text-[9px] font-extrabold bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-lg">Year</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-card rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-slate-800/80">
-                    <div class="p-6 border-b border-slate-200/60 dark:border-slate-800/60 flex justify-between items-center bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-white shadow-lg shadow-amber-500/30">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-                            </div>
-                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-white">Leaderboard</h3>
-                        </div>
-                        <span class="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-extrabold px-3 py-1.5 rounded-xl border border-blue-500/20 shadow-sm">Live Ranking</span>
-                    </div>
-                    <div class="p-6"><div id="leaderboard-container" class="space-y-3"></div></div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="glass-card p-6 rounded-3xl shadow-xl flex flex-col">
-                        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">Yearly Line Analytics</h3>
-                        <div class="h-64 relative flex-1"><canvas id="yearlyChart"></canvas></div>
-                    </div>
-                    <div class="glass-card p-6 rounded-3xl shadow-xl flex flex-col">
-                        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">Monthly Line Analytics</h3>
-                        <div class="h-64 relative flex-1"><canvas id="monthlyChart"></canvas></div>
-                    </div>
-                    <div class="glass-card p-6 rounded-3xl shadow-xl flex flex-col">
-                        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">Weekly Line Analytics</h3>
-                        <div class="h-64 relative flex-1"><canvas id="weeklyChart"></canvas></div>
-                    </div>
-                    <div class="glass-card p-6 rounded-3xl shadow-xl flex flex-col">
-                        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">Tasks Distribution Line Chart</h3>
-                        <div class="h-64 relative flex-1"><canvas id="taskChart"></canvas></div>
-                    </div>
-                </div>
-
-                <div class="glass-card rounded-3xl shadow-xl overflow-hidden">
-                    <div class="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex justify-between items-center">
-                        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Today's Activity Breakdown</h3>
-                        <span id="today-count-badge" class="bg-emerald-500/10 text-emerald-500 text-xs font-extrabold px-3 py-1 rounded-xl border border-emerald-500/20">0 Cases Today</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs">
-                            <thead id="today-table-head" class="bg-slate-50/50 dark:bg-dark-950/50 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider border-b border-slate-200/60 dark:border-slate-800/60 cursor-pointer select-none"></thead>
-                            <tbody id="today-activity-body" class="divide-y divide-slate-100 dark:divide-slate-800/40"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PAGE 2: DATA EXPLORER -->
-            <div id="page-main" class="hidden space-y-3">
-                <!-- Excel-style sheet tabs (one per user) -->
-                <div id="sheet-tabs" class="flex gap-1.5 overflow-x-auto pb-1"></div>
-
-                <div class="glass-card rounded-3xl shadow-xl overflow-hidden">
-                    <div class="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex justify-between items-center">
-                        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Dataset Records Explorer (click header to sort)</h3>
-                    </div>
-                    <div class="overflow-x-auto max-h-[600px]">
-                        <table class="w-full text-left text-xs">
-                            <thead id="table-head" class="bg-slate-50/70 dark:bg-dark-950/70 sticky top-0 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider border-b border-slate-200/60 dark:border-slate-800/60 z-10 select-none"></thead>
-                            <tbody id="table-body" class="divide-y divide-slate-100 dark:divide-slate-800/40"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </main>
+  <div class="card overflow-hidden">
+    <div class="p-5 flex items-center justify-between border-b" style="border-color:var(--line)">
+      <div class="h-sec">Today's activity</div><span id="today-count-badge" class="chip">0 cases today</span>
+    </div>
+    <div class="overflow-x-auto"><table class="w-full text-left text-xs">
+      <thead id="today-table-head" class="select-none cursor-pointer"></thead>
+      <tbody id="today-activity-body"></tbody></table></div>
+  </div>
 </div>
 
-<div id="status-el" class="fixed bottom-1 right-2 z-50 text-[11px] bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-bold border border-slate-200/80 dark:border-slate-800 shadow-lg flex items-center gap-2 transition-opacity duration-500">
-    <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Connecting to server...
+<!-- DATA EXPLORER -->
+<div id="page-main" class="hidden">
+  <div class="card overflow-hidden">
+    <div class="p-5 border-b" style="border-color:var(--line)"><div class="h-sec">Records explorer</div><div class="sub">Click a column title to sort. Type under a title to filter.</div></div>
+    <div class="overflow-auto max-h-[640px]"><table class="w-full text-left text-xs">
+      <thead id="table-head" class="sticky top-0 z-10 select-none" style="background:var(--card)"></thead>
+      <tbody id="table-body"></tbody></table></div>
+  </div>
+</div>
+
+</div>
+</main>
+</div>
+
+<div id="status-el" class="fixed bottom-2 right-3 z-50 text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-2 transition-opacity duration-500 card">
+  <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Connecting to server...
 </div>
 
 <script>
-const targetUrl = 'https://script.google.com/macros/s/AKfycbwePSbdzzsWDsLGLvLsa2jo_dxRRLjcV7XPIlEKmULam9vEPlk5JtzE7s5snMDdZXR3/exec';
-
-// Date order used in your sheet:
-// 'MDY' => 10/4/2026 means October 4   |   'DMY' => 10/4/2026 means 10 April
+const targetUrl = 'https://script.google.com/macros/s/AKfycbz0V2hziwVZG0tAS7jXcLFcrrXKtSlazwQCZBImuP-K__emYfoqSW5NPsyS03f4TCgC/exec';
+// 'MDY' => 10/4/2026 is October 4  |  'DMY' => 10/4/2026 is 10 April
 const DATE_ORDER = 'MDY';
+const MAX_COLUMNS = 7;
 
+// Sheet tabs that must never be treated as a user (compared in lower case)
+const EXCLUDED_SHEETS = ['dashboard'];
+let sheetMode = false;   // true when the server returns one list of rows per sheet tab (one tab = one user)
 let rawData = [], filteredData = [], headers = [];
-let uniqueTasks = new Set(), uniqueUsers = new Set();
-let currentSortColumn = null, currentSortDirection = 'asc';
+let userKey = '', taskKey = '';
+let userTotals = {};              // total cases per user (all data)
+let selectedUsers = new Set();    // empty set = all users
 let columnFilters = {};
-let todaySortColumn = null, todaySortDirection = 'asc';
-let yearlyChartInstance = null, monthlyChartInstance = null, weeklyChartInstance = null, taskChartInstance = null;
+let sortCol = null, sortDir = 'asc', todaySortCol = null, todaySortDir = 'asc';
+let charts = {};
 
-const statusEl = document.getElementById('status-el');
-const taskBtn = document.getElementById('task-btn');
-const taskMenu = document.getElementById('task-menu');
-const taskLabel = document.getElementById('task-label');
-const userFilterSelect = document.getElementById('user-filter-select');
-const startDateInput = document.getElementById('start-date-input');
-const endDateInput = document.getElementById('end-date-input');
-const searchInput = document.getElementById('search-input');
-const resetBtn = document.getElementById('reset-btn');
-const sidebar = document.getElementById('sidebar');
-const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+const $ = id => document.getElementById(id);
+const statusEl = $('status-el'), taskBtn = $('task-btn'), taskMenu = $('task-menu');
+const startIn = $('start-date-input'), endIn = $('end-date-input'), searchIn = $('search-input');
+const sidebar = $('sidebar'), sbk = $('sbk');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-/* ---------------- Helpers ---------------- */
-
-function debounce(fn, ms = 250) {
-    let t;
-    return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
-}
-
-function toggleDarkMode() {
-    document.documentElement.classList.toggle('dark');
-    renderCharts(filteredData);
-}
-
-function isMobileView() { return window.innerWidth <= 768; }
-
+/* ---------- Helpers ---------- */
+const isMobile = () => innerWidth <= 768;
 function toggleSidebar() {
-    if (isMobileView()) {
-        sidebar.classList.toggle('mobile-open');
-        sidebarBackdrop.classList.toggle('mobile-open');
-    } else {
-        sidebar.classList.toggle('collapsed');
-    }
+  if (isMobile()) { sidebar.classList.toggle('mobile-open'); sbk.classList.toggle('open'); }
+  else sidebar.classList.toggle('collapsed');
+}
+function closeMobile() { sidebar.classList.remove('mobile-open'); sbk.classList.remove('open'); }
+addEventListener('resize', () => { if (!isMobile()) closeMobile(); });
+
+function progress(p, t) { $('pbar').style.width = p + '%'; $('ppct').innerText = p + '%'; $('ptext').innerText = t; }
+const formatText = t => t ? t.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
+const initials = n => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+function avatarColor(n) {
+  let h = 0; for (const c of n) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return `linear-gradient(135deg,hsl(${h} 65% 48%),hsl(${(h + 40) % 360} 65% 40%))`;
 }
 
-function closeMobileSidebar() {
-    sidebar.classList.remove('mobile-open');
-    sidebarBackdrop.classList.remove('mobile-open');
-}
-
-window.addEventListener('resize', () => { if (!isMobileView()) closeMobileSidebar(); });
-
-function updateProgress(percent, text) {
-    document.getElementById('progress-bar').style.width = percent + '%';
-    document.getElementById('progress-percent').innerText = percent + '%';
-    document.getElementById('progress-text').innerText = text;
-}
-
-function formatText(text) {
-    if (!text) return '';
-    return text.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-}
-
-function getUserKey() {
-    return headers.find(h => h.toLowerCase().includes('name') || h.toLowerCase().includes('user')) || headers[0];
-}
-
-function getTaskKey() {
-    return headers.length > 1 ? headers[1] : headers[0];
-}
-
-// Parses the date text exactly as stored in the sheet (no timezone conversion)
 function parseCustomDate(val) {
-    if (!val) return null;
-    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
-    const s = val.toString().trim();
-    const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?)?/);
-    if (m) {
-        const a = parseInt(m[1], 10), b = parseInt(m[2], 10), year = parseInt(m[3], 10);
-        const month = DATE_ORDER === 'MDY' ? a : b;
-        const day = DATE_ORDER === 'MDY' ? b : a;
-        let hour = m[4] ? parseInt(m[4], 10) : 0;
-        const min = m[5] ? parseInt(m[5], 10) : 0;
-        const sec = m[6] ? parseInt(m[6], 10) : 0;
-        const ampm = m[7] ? m[7].toUpperCase() : null;
-        if (ampm === 'PM' && hour < 12) hour += 12;
-        if (ampm === 'AM' && hour === 12) hour = 0;
-        const d = new Date(year, month - 1, day, hour, min, sec);
-        if (isNaN(d.getTime()) || year < 2000 || year > 2100) return null;
-        return d;
-    }
-    const d = new Date(s);
-    if (isNaN(d.getTime())) return null;
-    if (d.getFullYear() < 2000 || d.getFullYear() > 2100) return null;
-    return d;
+  if (!val) return null;
+  if (val instanceof Date) return isNaN(val) ? null : val;
+  const s = val.toString().trim();
+  const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?)?/);
+  if (m) {
+    const a = +m[1], b = +m[2], year = +m[3];
+    const month = DATE_ORDER === 'MDY' ? a : b, day = DATE_ORDER === 'MDY' ? b : a;
+    let hour = m[4] ? +m[4] : 0; const ap = m[7] ? m[7].toUpperCase() : null;
+    if (ap === 'PM' && hour < 12) hour += 12;
+    if (ap === 'AM' && hour === 12) hour = 0;
+    const d = new Date(year, month - 1, day, hour, +(m[5] || 0), +(m[6] || 0));
+    return (isNaN(d) || year < 2000 || year > 2100) ? null : d;
+  }
+  const d = new Date(s);
+  return (isNaN(d) || d.getFullYear() < 2000 || d.getFullYear() > 2100) ? null : d;
 }
-
-function toLocalISODate(d) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function parseInputDate(str) {
-    if (!str) return null;
-    const [y, m, d] = str.split('-').map(Number);
-    return new Date(y, m - 1, d);
-}
+const toLocalISO = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const parseInputDate = s => { if (!s) return null; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 
 let dateKeyCache = null;
 function getDateKey() {
-    if (dateKeyCache && headers.includes(dateKeyCache)) return dateKeyCache;
-    dateKeyCache = headers.find(h => h.toLowerCase() === 'date') || headers.find(h => /date|time|created|stamp/i.test(h)) || null;
-    return dateKeyCache;
+  if (dateKeyCache && headers.includes(dateKeyCache)) return dateKeyCache;
+  return dateKeyCache = headers.find(h => h.toLowerCase() === 'date') || headers.find(h => /date|time|created|stamp/i.test(h)) || null;
+}
+// Parsed dates are cached per row so thousands of rows are not re-parsed on every update
+const dateCache = new WeakMap();
+const getRowDate = row => {
+  if (dateCache.has(row)) return dateCache.get(row);
+  const k = getDateKey(), d = k ? parseCustomDate(row[k]) : null;
+  dateCache.set(row, d); return d;
+};
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+// URLs (like the Image column) become clickable links
+const cellHtml = v => /^https?:\/\//i.test(v) ? `<a href="${esc(v)}" target="_blank" rel="noopener" style="color:var(--acc);font-weight:700">View link</a>` : esc(v);
+const cell = (row, h) => (row[h] === undefined || row[h] === null) ? '' : row[h].toString();
+
+/* Per-row cache (user, task, date parts, searchable text): computed once, then reused by every filter / KPI / chart */
+const metaCache = new WeakMap(), fmtCache = new Map();
+function fmt(t) {
+  let v = fmtCache.get(t);
+  if (v === undefined) { v = formatText(t); fmtCache.set(t, v); }
+  return v;
+}
+function meta(row) {
+  let m = metaCache.get(row);
+  if (!m) {
+    const d = getRowDate(row);
+    m = { u: (row[userKey] || '').toString().trim(), t: (row[taskKey] || '').toString().trim(), d: d, s: null };
+    if (d) { m.ts = d.getTime(); m.y = d.getFullYear(); m.mo = d.getMonth(); m.dt = d.getDate(); m.day = new Date(m.y, m.mo, m.dt).getTime(); }
+    metaCache.set(row, m);
+  }
+  return m;
+}
+const searchText = (row, m) => m.s !== null ? m.s : (m.s = headers.map(h => cell(row, h)).join('\u0001').toLowerCase());
+
+/* One pass: KPI counts + chart series */
+function compute(data) {
+  const now = new Date(), nowMs = now.getTime(), endMs = new Date(now).setHours(23, 59, 59, 999);
+  const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), weekAgo = nowMs - 7 * 864e5;
+  const Y = now.getFullYear(), M = now.getMonth();
+  const r = { daily: 0, weekly: 0, monthly: 0, yearly: 0, todayRows: new Set(),
+    months: Array(12).fill(0), days: Array(new Date(Y, M + 1, 0).getDate()).fill(0), week: Array(7).fill(0) };
+  data.forEach((row, i) => {
+    const m = meta(row); if (!m.d || m.ts > endMs) return;
+    if (m.day === t0) { r.daily++; r.todayRows.add(i); }
+    if (m.ts >= weekAgo) r.weekly++;
+    if (m.y === Y) { r.yearly++; r.months[m.mo]++; if (m.mo === M) { r.monthly++; r.days[m.dt - 1]++; } }
+    const diff = Math.round((t0 - m.day) / 864e5);
+    if (diff >= 0 && diff < 7) r.week[6 - diff]++;
+  });
+  return r;
 }
 
-function getRowDate(row) {
-    const key = getDateKey();
-    return key ? parseCustomDate(row[key]) : null;
+/* ---------- Navigation ---------- */
+function switchPage(p) {
+  if (isMobile()) closeMobile();
+  $('page-dashboard').classList.toggle('hidden', p !== 'dashboard');
+  $('page-main').classList.toggle('hidden', p !== 'main');
+  $('nav-dashboard').classList.toggle('on', p === 'dashboard');
+  $('nav-main').classList.toggle('on', p === 'main');
+  if (p === 'main') renderTable();
+  if (p === 'dashboard' && dashDirty) renderDash();
 }
-
-function getCellDisplay(row, h) {
-    const v = row[h];
-    return (v === undefined || v === null) ? '' : v.toString();
-}
-
-function computeCounts(data) {
-    const now = new Date();
-    const endOfToday = new Date(now); endOfToday.setHours(23, 59, 59, 999);
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const todayStr = now.toDateString();
-    const currentMonth = now.getMonth(), currentYear = now.getFullYear();
-    let daily = 0, weekly = 0, monthly = 0, yearly = 0;
-    const todayRows = new Set();
-    data.forEach((row, i) => {
-        const d = getRowDate(row);
-        if (!d || d > endOfToday) return;
-        if (d.toDateString() === todayStr) { daily++; todayRows.add(i); }
-        if (d >= oneWeekAgo) weekly++;
-        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) monthly++;
-        if (d.getFullYear() === currentYear) yearly++;
-    });
-    return { daily, weekly, monthly, yearly, todayRows };
-}
-
-/* ---------------- Navigation / presets ---------------- */
-
-function switchPage(page) {
-    if (isMobileView()) closeMobileSidebar();
-    const dash = document.getElementById('page-dashboard'), main = document.getElementById('page-main');
-    const navD = document.getElementById('nav-dashboard'), navM = document.getElementById('nav-main');
-    const active = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/25";
-    const inactive = "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60";
-    if (page === 'dashboard') {
-        dash.classList.remove('hidden'); main.classList.add('hidden');
-        navD.className = active; navM.className = inactive;
-    } else {
-        dash.classList.add('hidden'); main.classList.remove('hidden');
-        navM.className = active; navD.className = inactive;
-    }
-}
-
 taskBtn.addEventListener('click', () => taskMenu.classList.toggle('hidden'));
-document.addEventListener('click', (e) => {
-    if (!taskBtn.contains(e.target) && !taskMenu.contains(e.target)) taskMenu.classList.add('hidden');
-    const em = document.getElementById('excel-menu');
-    if (em) em.classList.add('hidden');
-});
+document.addEventListener('click', e => { if (!taskBtn.contains(e.target) && !taskMenu.contains(e.target)) taskMenu.classList.add('hidden'); });
 
-const PRESET_OFF = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700";
-const PRESET_ON = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white";
+function markPreset(p) { document.querySelectorAll('#presets button').forEach(b => b.classList.toggle('on', b.dataset.p === p)); }
+function setPreset(p) {
+  markPreset(p);
+  const now = new Date();
+  if (p === 'all') { startIn.value = ''; endIn.value = ''; }
+  else {
+    const from = p === 'weekly' ? new Date(now.getTime() - 7 * 864e5) : p === 'monthly' ? new Date(now.getFullYear(), now.getMonth(), 1) : new Date(now.getFullYear(), 0, 1);
+    startIn.value = toLocalISO(from); endIn.value = toLocalISO(now);
+  }
+  filterAndRender();
+}
 
-function setDatePreset(preset) {
-    ['all', 'weekly', 'monthly', 'yearly'].forEach(p => document.getElementById('preset-' + p).className = PRESET_OFF);
-    document.getElementById('preset-' + preset).className = PRESET_ON;
-    const now = new Date();
-    if (preset === 'all') {
-        startDateInput.value = ''; endDateInput.value = '';
-    } else {
-        let past;
-        if (preset === 'weekly') past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        else if (preset === 'monthly') past = new Date(now.getFullYear(), now.getMonth(), 1);
-        else past = new Date(now.getFullYear(), 0, 1);
-        startDateInput.value = toLocalISODate(past);
-        endDateInput.value = toLocalISODate(now);
+/* ---------- Data loading ---------- */
+let refreshTimer = null, isLoading = false;
+
+// silent = true: background refresh that keeps filters, sorting and the current page
+function loadData(silent) {
+  if (isLoading) return;
+  isLoading = true;
+  if (!silent) progress(40, 'Fetching data...');
+  else $('refresh-btn').classList.add('opacity-50');
+  // Cache-busting parameter so the newest sheet data is always returned
+  const url = api('after=');
+  return fetch(url).then(r => r.text()).then(text => {
+  if (!silent) progress(80, 'Processing...');
+  let data;
+  try {
+    const j = JSON.parse(text);
+    if (j && !Array.isArray(j) && j.status === 'error') {
+      statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Server error: ${esc(j.message)}`;
+      progress(100, 'Failed'); return;
     }
-    filterAndRender();
+    if (Array.isArray(j)) data = j;
+    else if (j.added && typeof j.added === 'object') { sheetMode = true; lastSig = j.sig; data = flattenSheets(j.added); }
+    else if (Array.isArray(j.data)) data = j.data;
+    else {
+      // Object like { "Sheet1": [...], "Sheet2": [...] } -> merge every sheet into one list
+      data = [];
+      sheetMode = true; data = flattenSheets(j);
+    }
+  } catch (e) { data = Papa.parse(text, { header: true, skipEmptyLines: true }).data; }
+
+  if (!data || !data.length) {
+    if (silent) return; statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> No records found`; return; }
+
+  if (silent) { applyRefresh(data); return; }
+  progress(100, 'Up to date'); stamp();
+  statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Loaded ${data.length} rows`;
+  window.__keep = false;
+  setTimeout(() => { if (!window.__keep) { statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none'; } }, 3000);
+
+  rawData = data;
+  if (sheetMode) {
+    // Show every column found in any tab (in sheet order); columns that are empty everywhere are hidden
+    const used = new Set(), seen = new Set(); headers = [];
+    rawData.forEach(r => { for (const k in r) {
+      if (k === 'Sheet') continue;
+      if (r[k] !== '' && r[k] != null) used.add(k);
+      if (!seen.has(k)) { seen.add(k); headers.push(k); }
+    } });
+    headers = headers.filter(k => used.has(k));
+  } else headers = Object.keys(rawData[0]).slice(0, MAX_COLUMNS);
+  taskKey = headers.length > 1 ? headers[1] : headers[0];
+  userKey = headers.find(h => /name|user/i.test(h)) || headers[0];
+  // In sheet mode every tab is a user, so the tab name is the user and always shown as a column
+  if (sheetMode) { headers.push('Sheet'); userKey = 'Sheet'; }
+  buildFilters();
+  renderHead();
+  filteredData = rawData;
+  updateAll();
+
+  const dk = getDateKey();
+  if (!dk) warn(`No date column found. Columns: ${headers.join(', ')}`);
+  else {
+    let bad = 0, sample = '';
+    rawData.forEach(r => { if (!getRowDate(r)) { bad++; if (!sample) sample = String(r[dk]); } });
+    if (bad) warn(`${bad} of ${rawData.length} rows have an unreadable date. Example: "${esc(sample)}"`);
+  }
+}).catch(err => {
+  if (silent) { console.error(err); $('ptext').innerText = 'Refresh failed, retrying'; return; }
+  progress(100, 'Failed'); statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Connection error`; console.error(err);
+}).finally(() => { isLoading = false; $('refresh-btn').classList.remove('opacity-50'); });
 }
 
-function uncheckPresets() {
-    ['all', 'weekly', 'monthly', 'yearly'].forEach(p => document.getElementById('preset-' + p).className = PRESET_OFF);
+const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTimeString('en-GB'); };
+
+/* ---------- Live updates ----------
+   Google Sheets cannot push to a website, so the page asks a tiny endpoint (?check=1) every few seconds.
+   The full data is downloaded only when a new row was added to any user tab. */
+const LIVE_CHECK_MS = 10000;
+let lastSig = null;   // "tab:lastRow|tab:lastRow" signature of the data the page currently shows
+
+const api = q => targetUrl + (targetUrl.includes('?') ? '&' : '?') + q + '&t=' + Date.now();
+const sigMap = s => { const m = {}; (s || '').split('|').forEach(x => { if (!x) return; const i = x.lastIndexOf(':'); m[x.slice(0, i)] = +x.slice(i + 1) || 0; }); return m; };
+
+// { "tab": [rows] } -> one flat list, every row tagged with its tab name
+function flattenSheets(obj) {
+  const out = [];
+  Object.keys(obj || {}).forEach(sheet => {
+    if (EXCLUDED_SHEETS.includes(sheet.trim().toLowerCase()) || !Array.isArray(obj[sheet])) return;
+    obj[sheet].forEach(r => out.push(Object.assign({}, r, { Sheet: sheet })));
+  });
+  return out;
 }
 
-/* ---------------- Data loading ---------------- */
-
-updateProgress(40, "Fetching data...");
-
-fetch(targetUrl)
-    .then(response => response.text())
-    .then(textData => {
-        updateProgress(80, "Processing dataset...");
-        let parsed;
-        try {
-            const jsonData = JSON.parse(textData);
-            if (!Array.isArray(jsonData) && jsonData && jsonData.status === 'error') {
-                updateProgress(100, "Failed");
-                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Server error: ${jsonData.message}`;
-                console.error('Apps Script error:', jsonData.message);
-                throw new Error('server-error');
-            }
-            parsed = { data: Array.isArray(jsonData) ? jsonData : (jsonData.data || []) };
-        } catch (e) {
-            if (e.message === 'server-error') return;
-            parsed = Papa.parse(textData, { header: true, skipEmptyLines: true });
-        }
-
-        const data = parsed.data;
-        updateProgress(100, "Completed");
-
-        if (!data || data.length === 0) {
-            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> No records found!`;
-            return;
-        }
-
-        statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Loaded (${data.length} rows)`;
-        statusEl.className = "fixed bottom-1 right-2 z-50 text-[11px] bg-white/90 dark:bg-dark-900/90 backdrop-blur-xl text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl font-bold border border-emerald-500/20 shadow-lg flex items-center gap-2 transition-opacity duration-500";
-        window.__keepStatus = false;
-        setTimeout(() => {
-            if (window.__keepStatus) return;
-            statusEl.style.opacity = '0';
-            statusEl.style.pointerEvents = 'none';
-        }, 3000);
-
-        rawData = data;
-        headers = Object.keys(rawData[0]).slice(0, 6);
-        extractFilters();
-        filteredData = rawData;
-        updateAll(filteredData);
-
-        const dk = getDateKey();
-        if (!dk) {
-            window.__keepStatus = true;
-            statusEl.style.opacity = '1';
-            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> No Date column found. Columns: ${headers.join(', ')}`;
-        } else {
-            let bad = 0, sample = '';
-            rawData.forEach(r => { if (!getRowDate(r)) { bad++; if (!sample) sample = String(r[dk]); } });
-            if (bad > 0) {
-                window.__keepStatus = true;
-                statusEl.style.opacity = '1';
-                statusEl.style.pointerEvents = 'auto';
-                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> ${bad} of ${rawData.length} rows have an unreadable date. Example: "${sample}"`;
-            }
-        }
-    })
-    .catch(err => {
-        updateProgress(100, "Failed");
-        statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Connection error!`;
-        console.error(err);
-    });
-
-const debouncedFilter = debounce(() => filterAndRender());
-
-function extractFilters() {
-    const taskKey = getTaskKey(), userKey = getUserKey();
-    rawData.forEach(row => {
-        if (row[taskKey]) uniqueTasks.add(row[taskKey].toString().trim());
-        if (row[userKey]) uniqueUsers.add(row[userKey].toString().trim());
-    });
-
-    taskMenu.innerHTML = '';
-    uniqueTasks.forEach(task => {
-        const div = document.createElement('label');
-        div.className = "flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 p-2 rounded-xl transition-all";
-        div.innerHTML = `<input type="checkbox" value="${task}" class="task-checkbox rounded-lg border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"> ${formatText(task)}`;
-        taskMenu.appendChild(div);
-    });
-    document.querySelectorAll('.task-checkbox').forEach(cb => cb.addEventListener('change', filterAndRender));
-
-    userFilterSelect.innerHTML = `<option value="">All Users</option>`;
-    uniqueUsers.forEach(user => {
-        const opt = document.createElement('option');
-        opt.value = user;
-        opt.textContent = formatText(user);
-        userFilterSelect.appendChild(opt);
-    });
-    userFilterSelect.addEventListener('change', filterAndRender);
-    startDateInput.addEventListener('change', () => { uncheckPresets(); filterAndRender(); });
-    endDateInput.addEventListener('change', () => { uncheckPresets(); filterAndRender(); });
-    searchInput.addEventListener('input', debouncedFilter);
-    resetBtn.addEventListener('click', resetFilters);
+async function checkForChanges() {
+  if (document.hidden || isLoading || !rawData.length || lastSig === null) return;
+  try {
+    const j = await (await fetch(api('check=1'))).json();
+    if (!j || j.sig === undefined || j.sig === lastSig) return;
+    await fetchAdded();
+  } catch (e) { console.error(e); }
 }
 
-/* ---------------- Filtering / sorting ---------------- */
+// Downloads ONLY the new rows and adds them to the data already on the page
+async function fetchAdded() {
+  isLoading = true;
+  try {
+    const j = await (await fetch(api('after=' + encodeURIComponent(lastSig)))).json();
+    if (!j || !j.added) return;
+    const before = sigMap(lastSig), now = sigMap(j.sig);
+    lastSig = j.sig;
+    // Rows were deleted somewhere: do a full reload so the page matches the sheet
+    if (Object.keys(before).some(k => !(k in now) || now[k] < before[k])) { isLoading = false; await loadData(true); return; }
+    const rows = flattenSheets(j.added);
+    if (rows.length) applyAdded(rows);
+  } catch (e) { console.error(e); } finally { isLoading = false; }
+}
+
+function addTaskOption(t) {
+  const l = document.createElement('label');
+  l.className = 'flex items-center gap-2.5 text-xs font-semibold cursor-pointer p-2 rounded-lg hover:bg-slate-500/10';
+  l.innerHTML = `<input type="checkbox" value="${esc(t)}" class="task-checkbox accent-teal-600"> ${esc(formatText(t))}`;
+  l.querySelector('input').addEventListener('change', filterAndRender);
+  taskMenu.appendChild(l);
+}
+
+function applyAdded(rows) {
+  rawData = rawData.concat(rows);
+  const known = new Set([...document.querySelectorAll('.task-checkbox')].map(c => c.value));
+  rows.forEach(r => {
+    const u = r[userKey] ? r[userKey].toString().trim() : '';
+    if (u) userTotals[u] = (userTotals[u] || 0) + 1;
+    const t = r[taskKey] ? r[taskKey].toString().trim() : '';
+    if (t && !known.has(t)) { known.add(t); addTaskOption(t); }
+  });
+  renderUsers(); filterAndRender(); stamp(); notifyNew(rows);
+}
+
+function startLiveWatch() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(checkForChanges, LIVE_CHECK_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForChanges(); });
+}
+
+// Applies fresh data without resetting the user's filters, sort order or selected users
+function applyRefresh(data) {
+  const fresh = findNewRows(rawData, data);
+  const checked = new Set([...document.querySelectorAll('.task-checkbox:checked')].map(c => c.value));
+  rawData = data; userTotals = {};
+  const tasks = new Set();
+  rawData.forEach(r => {
+    if (r[taskKey]) tasks.add(r[taskKey].toString().trim());
+    const u = r[userKey] ? r[userKey].toString().trim() : '';
+    if (u) userTotals[u] = (userTotals[u] || 0) + 1;
+  });
+  taskMenu.innerHTML = '';
+  tasks.forEach(t => {
+    const l = document.createElement('label');
+    l.className = 'flex items-center gap-2.5 text-xs font-semibold cursor-pointer p-2 rounded-lg hover:bg-slate-500/10';
+    l.innerHTML = `<input type="checkbox" value="${esc(t)}" class="task-checkbox accent-teal-600"${checked.has(t) ? ' checked' : ''}> ${esc(formatText(t))}`;
+    l.querySelector('input').addEventListener('change', filterAndRender);
+    taskMenu.appendChild(l);
+  });
+  renderUsers(); filterAndRender(); stamp();
+  if (fresh.length) notifyNew(fresh);
+}
+
+/* ---------- New case counter (tab title only) ---------- */
+let newCount = 0;
+const BASE_TITLE = document.title;
+const sig = r => JSON.stringify(r);
+
+// Rows present in newData that were not in oldData (duplicates are counted, so identical rows still alert)
+function findNewRows(oldData, newData) {
+  const seen = {};
+  oldData.forEach(r => { const k = sig(r); seen[k] = (seen[k] || 0) + 1; });
+  const out = [];
+  newData.forEach(r => { const k = sig(r); if (seen[k]) seen[k]--; else out.push(r); });
+  return out;
+}
+
+// New cases only add a counter to the browser tab title while the tab is in the background
+function notifyNew(rows) {
+  if (document.hidden) { newCount += rows.length; document.title = `(${newCount}) ${BASE_TITLE}`; }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { newCount = 0; document.title = BASE_TITLE; } });
+
+loadData(false);
+startLiveWatch();
+
+function warn(msg) {
+  window.__keep = true; statusEl.style.opacity = '1'; statusEl.style.pointerEvents = 'auto';
+  statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> ${msg}`;
+}
+
+/* ---------- Filters ---------- */
+function buildFilters() {
+  const tasks = new Set();
+  userTotals = {};
+  rawData.forEach(r => {
+    if (r[taskKey]) tasks.add(r[taskKey].toString().trim());
+    const u = r[userKey] ? r[userKey].toString().trim() : '';
+    if (u) userTotals[u] = (userTotals[u] || 0) + 1;
+  });
+  taskMenu.innerHTML = '';
+  tasks.forEach(t => {
+    const l = document.createElement('label');
+    l.className = 'flex items-center gap-2.5 text-xs font-semibold cursor-pointer p-2 rounded-lg hover:bg-slate-500/10';
+    l.innerHTML = `<input type="checkbox" value="${esc(t)}" class="task-checkbox accent-teal-600"> ${esc(formatText(t))}`;
+    taskMenu.appendChild(l);
+  });
+  document.querySelectorAll('.task-checkbox').forEach(cb => cb.addEventListener('change', filterAndRender));
+  startIn.addEventListener('change', () => { markPreset(''); filterAndRender(); });
+  endIn.addEventListener('change', () => { markPreset(''); filterAndRender(); });
+  searchIn.addEventListener('input', debounce(filterAndRender, 250));
+  $('reset-btn').addEventListener('click', resetFilters);
+  $('u-search').addEventListener('input', renderUsers);
+  renderUsers();
+}
+
+/* Sidebar users: click one by one, or select all */
+function renderUsers() {
+  const q = $('u-search').value.toLowerCase().trim();
+  const list = $('ulist'); list.innerHTML = '';
+  const names = Object.keys(userTotals).sort((a, b) => userTotals[b] - userTotals[a]).filter(n => !q || n.toLowerCase().includes(q));
+  $('u-total').innerText = `(${Object.keys(userTotals).length})`;
+  if (!names.length) { list.innerHTML = '<div class="st text-xs text-slate-500 text-center py-4">No users found</div>'; return; }
+  names.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'uitem' + (selectedUsers.has(n) ? ' sel' : '');
+    el.title = formatText(n);
+    el.innerHTML = `<span class="av" style="background:${avatarColor(n)}">${esc(initials(formatText(n)))}</span>
+      <span class="st flex-1 min-w-0 truncate text-[13px] font-semibold text-slate-200">${esc(formatText(n))}</span>
+      <span class="st text-[11px] font-bold text-slate-500">${userTotals[n]}</span>
+      <span class="st tick">✓</span>`;
+    el.addEventListener('click', () => {
+      selectedUsers.has(n) ? selectedUsers.delete(n) : selectedUsers.add(n);
+      el.classList.toggle('sel');   // instant highlight, no list rebuild
+      scheduleFilter();             // several quick clicks are merged into one update
+    });
+    list.appendChild(el);
+  });
+}
+const scheduleFilter = debounce(filterAndRender, 60);
+function selectAllUsers() { Object.keys(userTotals).forEach(u => selectedUsers.add(u)); renderUsers(); filterAndRender(); }
+function clearUsers() { selectedUsers.clear(); renderUsers(); filterAndRender(); }
 
 function filterAndRender() {
-    const selectedUser = userFilterSelect.value;
-    const startDate = parseInputDate(startDateInput.value);
-    const endDate = parseInputDate(endDateInput.value);
-    if (endDate) endDate.setHours(23, 59, 59, 999);
-    const searchText = searchInput.value.toLowerCase().trim();
+  tableLimit = Infinity;   // always show every matching row
+  const start = parseInputDate(startIn.value), end = parseInputDate(endIn.value);
+  if (end) end.setHours(23, 59, 59, 999);
+  const q = searchIn.value.toLowerCase().trim();
+  const tasks = new Set([...document.querySelectorAll('.task-checkbox:checked')].map(c => c.value));
+  $('task-label').innerText = tasks.size ? tasks.size + ' tasks' : 'Tasks';
+  const colFilters = Object.keys(columnFilters).map(k => [k, (columnFilters[k] || '').trim().toLowerCase()]).filter(x => x[1]);
 
-    const selectedTasks = Array.from(document.querySelectorAll('.task-checkbox:checked')).map(cb => cb.value);
-    taskLabel.innerText = selectedTasks.length > 0 ? selectedTasks.length + " Tasks" : "Tasks";
-
-    const userKey = getUserKey(), taskKey = getTaskKey();
-
-    filteredData = rawData.filter(row => {
-        const matchUser = !selectedUser || (row[userKey] && row[userKey].toString().trim() === selectedUser);
-        const matchTask = selectedTasks.length === 0 || (row[taskKey] && selectedTasks.includes(row[taskKey].toString().trim()));
-        const matchSearch = !searchText || headers.some(h => getCellDisplay(row, h).toLowerCase().includes(searchText));
-
-        let matchColumnFilters = true;
-        for (const col in columnFilters) {
-            const colVal = columnFilters[col];
-            if (colVal && colVal.trim() !== '') {
-                if (!getCellDisplay(row, col).toLowerCase().startsWith(colVal.toLowerCase().trim())) {
-                    matchColumnFilters = false;
-                    break;
-                }
-            }
-        }
-
-        let matchDate = true;
-        if (startDate || endDate) {
-            const d = getRowDate(row);
-            matchDate = !!d && (!startDate || d >= startDate) && (!endDate || d <= endDate);
-        }
-        return matchUser && matchTask && matchSearch && matchColumnFilters && matchDate;
-    });
-
-    updateAll(filteredData);
+  filteredData = rawData.filter(row => {
+    const m = meta(row);
+    if (selectedUsers.size && !selectedUsers.has(m.u)) return false;
+    if (tasks.size && !tasks.has(m.t)) return false;
+    if (q && !searchText(row, m).includes(q)) return false;
+    for (let i = 0; i < colFilters.length; i++) if (!cell(row, colFilters[i][0]).toLowerCase().startsWith(colFilters[i][1])) return false;
+    if (start || end) {
+      if (!m.d || (start && m.d < start) || (end && m.d > end)) return false;
+    }
+    return true;
+  });
+  updateAll();
 }
 
 function resetFilters() {
-    userFilterSelect.value = '';
-    startDateInput.value = '';
-    endDateInput.value = '';
-    searchInput.value = '';
-    columnFilters = {};
-    document.querySelectorAll('.column-search-input').forEach(inp => inp.value = '');
-    document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = false);
-    taskLabel.innerText = "Tasks";
-    setDatePreset('all');
-    filteredData = rawData;
-    currentSortColumn = null;
-    todaySortColumn = null;
-    updateAll(filteredData);
+  selectedUsers.clear(); $('u-search').value = ''; searchIn.value = ''; columnFilters = {};
+  document.querySelectorAll('.column-search-input').forEach(i => i.value = '');
+  document.querySelectorAll('.task-checkbox').forEach(c => c.checked = false);
+  sortCol = null; todaySortCol = null;
+  renderUsers(); renderHead(); setPreset('all');
 }
 
-function sortTable(column) {
-    if (currentSortColumn === column) {
-        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSortColumn = column;
-        currentSortDirection = 'asc';
-    }
-    updateAll(filteredData);
+function sortTable(c) {
+  if (sortCol === c) sortDir = sortDir === 'asc' ? 'desc' : 'asc'; else { sortCol = c; sortDir = 'asc'; }
+  renderHead(); updateAll();
 }
-
-function sortTodayTable(column) {
-    if (todaySortColumn === column) {
-        todaySortDirection = todaySortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        todaySortColumn = column;
-        todaySortDirection = 'asc';
-    }
-    renderTableAndCards(filteredData);
+function sortToday(c) {
+  if (todaySortCol === c) todaySortDir = todaySortDir === 'asc' ? 'desc' : 'asc'; else { todaySortCol = c; todaySortDir = 'asc'; }
+  updateAll();
 }
+const runColumnFilter = debounce(filterAndRender, 250);
+function handleColumnSearch(col, v) { columnFilters[col] = v; runColumnFilter(); }
 
-function updateAll(data) {
-    if (currentSortColumn) {
-        const isDateCol = currentSortColumn === getDateKey();
-        filteredData.sort((a, b) => {
-            let valA, valB;
-            if (isDateCol) {
-                const da = parseCustomDate(a[currentSortColumn]);
-                const db = parseCustomDate(b[currentSortColumn]);
-                valA = da ? da.getTime() : 0;
-                valB = db ? db.getTime() : 0;
-            } else {
-                valA = a[currentSortColumn] !== undefined ? a[currentSortColumn] : '';
-                valB = b[currentSortColumn] !== undefined ? b[currentSortColumn] : '';
-            }
-            if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
-            if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
-    }
-    renderTableAndCards(data);
-    renderCharts(data);
-    renderSheetTabs();
-}
-
-/* ---------------- Sheet tabs (one tab per user) ---------------- */
-
-function renderSheetTabs() {
-    const box = document.getElementById('sheet-tabs');
-    if (!box || !rawData.length) return;
-    const uk = getUserKey();
-    const counts = {};
-    rawData.forEach(r => {
-        const u = (r[uk] || 'Unknown').toString().trim();
-        counts[u] = (counts[u] || 0) + 1;
+/* ---------- Rendering ---------- */
+let dashDirty = false;
+function updateAll() {
+  if (sortCol) {
+    const isDate = sortCol === getDateKey();
+    filteredData.sort((a, b) => {
+      let x, y;
+      if (isDate) { x = (getRowDate(a) || 0) * 1; y = (getRowDate(b) || 0) * 1; }
+      else { x = a[sortCol] ?? ''; y = b[sortCol] ?? ''; }
+      return x < y ? (sortDir === 'asc' ? -1 : 1) : x > y ? (sortDir === 'asc' ? 1 : -1) : 0;
     });
-    const cur = userFilterSelect.value;
-    const on = "px-4 py-2 rounded-t-xl text-xs font-bold whitespace-nowrap bg-blue-600 text-white shadow";
-    const off = "px-4 py-2 rounded-t-xl text-xs font-bold whitespace-nowrap bg-white dark:bg-dark-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-700";
-
-    box.innerHTML = '';
-    const add = (val, label) => {
-        const b = document.createElement('button');
-        b.className = (cur === val) ? on : off;
-        b.textContent = label;
-        b.onclick = () => { userFilterSelect.value = val; filterAndRender(); };
-        box.appendChild(b);
-    };
-    add('', `All (${rawData.length})`);
-    Object.keys(counts).forEach(u => add(u, `${formatText(u)} (${counts[u]})`));
+  }
+  renderScope();
+  // Only the page that is visible gets drawn; the other one is drawn when you switch to it
+  if (!$('page-main').classList.contains('hidden')) renderTable();
+  if (!$('page-dashboard').classList.contains('hidden')) renderDash(); else dashDirty = true;
+}
+function renderDash() {
+  dashDirty = false;
+  const c = compute(filteredData);
+  renderKpisAndBoard(c);
+  renderCharts(filteredData, c);
 }
 
-/* ---------------- Charts ---------------- */
-
-function renderCharts(data) {
-    const isDark = document.documentElement.classList.contains('dark');
-    const textColor = isDark ? '#94a3b8' : '#64748b';
-    const gridColor = isDark ? '#1e293b' : '#e2e8f0';
-    const counts = computeCounts(data);
-    const currentYear = new Date().getFullYear();
-    const taskKey = getTaskKey();
-
-    const taskCounts = {};
-    data.forEach(row => {
-        if (row[taskKey]) {
-            const t = formatText(row[taskKey]);
-            taskCounts[t] = (taskCounts[t] || 0) + 1;
-        }
-    });
-
-    const baseOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } },
-            x: { grid: { display: false }, ticks: { color: textColor } }
-        }
-    };
-
-    function makeLine(canvasId, old, label, labels, values, color, bg) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        if (old) old.destroy();
-        return new Chart(ctx, {
-            type: 'line',
-            data: { labels, datasets: [{ label, data: values, borderColor: color, backgroundColor: bg, fill: true, tension: 0.4, borderWidth: 3 }] },
-            options: baseOptions
-        });
-    }
-
-    yearlyChartInstance = makeLine('yearlyChart', yearlyChartInstance, 'Yearly Cases', [currentYear.toString()], [counts.yearly], '#f59e0b', 'rgba(245,158,11,0.1)');
-    monthlyChartInstance = makeLine('monthlyChart', monthlyChartInstance, 'Monthly Cases', ['This Month'], [counts.monthly], '#6366f1', 'rgba(99,102,241,0.1)');
-    weeklyChartInstance = makeLine('weeklyChart', weeklyChartInstance, 'Weekly Cases', ['Last 7 Days'], [counts.weekly], '#a855f7', 'rgba(168,85,247,0.1)');
-
-    const labelsArr = Object.keys(taskCounts), dataArr = Object.values(taskCounts);
-    taskChartInstance = makeLine('taskChart', taskChartInstance, 'Task Count',
-        labelsArr.length ? labelsArr : ['No Tasks'], dataArr.length ? dataArr : [0], '#3b82f6', 'rgba(59,130,246,0.1)');
+function renderScope() {
+  const n = selectedUsers.size;
+  $('scope-line').innerText = n ? `Showing ${n} selected user${n > 1 ? 's' : ''} · ${filteredData.length} rows` : `Showing all users · ${filteredData.length} rows`;
+  const box = $('scope-chips'); box.innerHTML = '';
+  [...selectedUsers].slice(0, 6).forEach(u => {
+    const c = document.createElement('span'); c.className = 'chip'; c.textContent = formatText(u); box.appendChild(c);
+  });
+  if (n > 6) { const c = document.createElement('span'); c.className = 'chip'; c.textContent = `+${n - 6} more`; box.appendChild(c); }
 }
 
-/* ---------------- Tables, KPI cards, leaderboard ---------------- */
-
-function renderTableAndCards(data) {
-    const headTr = document.getElementById('table-head');
-    const tbody = document.getElementById('table-body');
-
-    // Build the header (with filter inputs) only ONCE, so inputs keep focus
-    // and the mobile keyboard does not close while typing.
-    const headSig = headers.join('|');
-    if (headTr.dataset.sig !== headSig) {
-        headTr.dataset.sig = headSig;
-        headTr.innerHTML = `
-            <tr>
-                <th class="p-3 font-bold">#</th>
-                ${headers.map(h => {
-                    const isImageCol = h.toLowerCase().includes('image');
-                    return `
-                        <th class="p-3">
-                            <div class="flex items-center justify-between cursor-pointer mb-1.5 hover:text-blue-500 transition-colors" onclick="sortTable('${h}')">
-                                <span class="sort-label" data-col="${h}">${h}</span>
-                            </div>
-                            ${isImageCol ? '' : `<input type="text" placeholder="Filter ${h}..." value="${columnFilters[h] || ''}" data-col="${h}" oninput="handleColumnSearch('${h}', this.value)" onclick="event.stopPropagation()" class="column-search-input w-full bg-white dark:bg-dark-900 border border-slate-200 dark:border-slate-700/80 text-[11px] font-semibold text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm">`}
-                        </th>`;
-                }).join('')}
-            </tr>`;
-    }
-    // Only update the sort arrows
-    headTr.querySelectorAll('.sort-label').forEach(el => {
-        const h = el.dataset.col;
-        const ind = currentSortColumn === h ? (currentSortDirection === 'asc' ? ' ▲' : ' ▼') : '';
-        el.textContent = h + ind;
-    });
-
-    tbody.innerHTML = '';
-    document.getElementById('stat-total').innerText = rawData.length;
-
-    const counts = computeCounts(data);
-    const todayActivityMap = {}, userCaseCounts = {};
-    const userKey = getUserKey(), taskKey = getTaskKey();
-    const frag = document.createDocumentFragment();
-
-    data.forEach((row, index) => {
-        const rowUser = row[userKey] ? formatText(row[userKey]) : "Unknown";
-        const rowTask = row[taskKey] ? formatText(row[taskKey]) : "General";
-        userCaseCounts[rowUser] = (userCaseCounts[rowUser] || 0) + 1;
-
-        if (counts.todayRows.has(index)) {
-            const k = rowUser + "___" + rowTask;
-            todayActivityMap[k] = (todayActivityMap[k] || 0) + 1;
-        }
-
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all";
-        const tdIndex = document.createElement('td');
-        tdIndex.className = "p-3 font-bold text-slate-400";
-        tdIndex.innerText = index + 1;
-        tr.appendChild(tdIndex);
-        headers.forEach(h => {
-            const td = document.createElement('td');
-            td.className = "p-3";
-            td.innerText = getCellDisplay(row, h);
-            tr.appendChild(td);
-        });
-        frag.appendChild(tr);
-    });
-    tbody.appendChild(frag);
-
-    document.getElementById('stat-daily').innerText = counts.daily;
-    document.getElementById('stat-weekly').innerText = counts.weekly;
-    document.getElementById('stat-monthly').innerText = counts.monthly;
-    document.getElementById('stat-yearly').innerText = counts.yearly;
-
-    // Leaderboard
-    const lb = document.getElementById('leaderboard-container');
-    lb.innerHTML = '';
-    const sortedUsers = Object.keys(userCaseCounts).sort((a, b) => userCaseCounts[b] - userCaseCounts[a]);
-    const maxCount = sortedUsers.length > 0 ? userCaseCounts[sortedUsers[0]] : 1;
-
-    if (sortedUsers.length === 0) {
-        lb.innerHTML = `<div class="text-center text-slate-400 py-4 text-xs">No user data available for ranking in this date range.</div>`;
-    } else {
-        sortedUsers.forEach((user, idx) => {
-            const count = userCaseCounts[user];
-            const pct = Math.round((count / maxCount) * 100);
-            const badge = idx === 0 ? 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-white shadow-md shadow-amber-500/30'
-                : idx === 1 ? 'bg-gradient-to-tr from-slate-300 to-slate-400 text-white shadow-md'
-                : idx === 2 ? 'bg-gradient-to-tr from-amber-700 to-amber-600 text-white shadow-md'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
-            const rowDiv = document.createElement('div');
-            rowDiv.className = "flex items-center gap-4 p-3.5 rounded-2xl bg-white/50 dark:bg-dark-900/50 border border-slate-200/60 dark:border-slate-800/60 transition-all hover:scale-[1.01]";
-            rowDiv.innerHTML = `
-                <div class="w-8 h-8 rounded-xl ${badge} flex items-center justify-center font-black text-xs flex-shrink-0">#${idx + 1}</div>
-                <div class="flex-1 space-y-1.5">
-                    <div class="flex justify-between items-center text-xs">
-                        <span class="font-extrabold text-slate-800 dark:text-slate-200">${user}</span>
-                        <span class="font-black text-blue-600 dark:text-blue-400">${count} Cases</span>
-                    </div>
-                    <div class="w-full bg-slate-200/70 dark:bg-dark-800 h-2 rounded-full overflow-hidden">
-                        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
-                    </div>
-                </div>`;
-            lb.appendChild(rowDiv);
-        });
-    }
-
-    // Today's activity table
-    const arrow = col => todaySortColumn === col ? (todaySortDirection === 'asc' ? ' ▲' : ' ▼') : '';
-    document.getElementById('today-table-head').innerHTML = `
-        <tr>
-            <th class="p-4">#</th>
-            <th class="p-4 hover:text-blue-500 transition-colors" onclick="sortTodayTable('user')">User Name${arrow('user')}</th>
-            <th class="p-4 hover:text-blue-500 transition-colors" onclick="sortTodayTable('task')">Task Name${arrow('task')}</th>
-            <th class="p-4 text-right hover:text-blue-500 transition-colors" onclick="sortTodayTable('count')">Count${arrow('count')}</th>
-        </tr>`;
-
-    const todayItems = Object.keys(todayActivityMap).map(k => {
-        const parts = k.split('___');
-        return { user: parts[0], task: parts[1], count: todayActivityMap[k] };
-    });
-    if (todaySortColumn) {
-        todayItems.sort((a, b) => {
-            const A = a[todaySortColumn], B = b[todaySortColumn];
-            if (A < B) return todaySortDirection === 'asc' ? -1 : 1;
-            if (A > B) return todaySortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
-    }
-
-    const todayBody = document.getElementById('today-activity-body');
-    todayBody.innerHTML = '';
-    document.getElementById('today-count-badge').innerText = counts.todayRows.size + " Cases Today";
-
-    if (todayItems.length === 0) {
-        todayBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No activity recorded for today.</td></tr>`;
-    } else {
-        let i = 1;
-        todayItems.forEach(item => {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50 dark:hover:bg-dark-800/50 transition-all";
-            tr.innerHTML = `
-                <td class="p-3 font-bold text-slate-400">${i++}</td>
-                <td class="p-3 font-semibold">${item.user}</td>
-                <td class="p-3"><span class="bg-slate-100 dark:bg-dark-800 px-2.5 py-1 rounded-xl">${item.task}</span></td>
-                <td class="p-3 text-right font-black text-blue-500">${item.count}</td>`;
-            todayBody.appendChild(tr);
-        });
-    }
+function renderHead() {
+  $('table-head').innerHTML = `<tr><th>#</th>${headers.map(h => {
+    const ind = sortCol === h ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+    const noFilter = /image/i.test(h);
+    return `<th><div class="cursor-pointer mb-1.5 hover:text-teal-600" onclick="sortTable('${h.replace(/'/g, "\\'")}')">${esc(h)}${ind}</div>${noFilter ? '' :
+      `<input class="column-search-input ctl !py-1.5 !text-[11px] w-full" placeholder="Filter..." value="${esc(columnFilters[h] || '')}" oninput="handleColumnSearch('${h.replace(/'/g, "\\'")}',this.value)">`}</th>`;
+  }).join('')}</tr>`;
 }
 
-function handleColumnSearch(column, value) {
-    columnFilters[column] = value;
-    debouncedFilter();
+let tableLimit = Infinity;   // show ALL rows (set a number like 500 to limit again if the page gets slow)
+function renderTable() {
+  const tb = $('table-body'), frag = document.createDocumentFragment();
+  const shown = filteredData.slice(0, tableLimit);
+  shown.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="font-bold opacity-40">${i + 1}</td>` + headers.map(h => `<td>${cellHtml(cell(row, h))}</td>`).join('');
+    frag.appendChild(tr);
+  });
+  tb.innerHTML = '';
+  if (!filteredData.length) { tb.innerHTML = `<tr><td colspan="${headers.length + 1}" class="text-center opacity-50 !py-8">No records match the current filters.</td></tr>`; return; }
+  tb.appendChild(frag);
+  if (filteredData.length > tableLimit) {
+    const left = filteredData.length - tableLimit;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="${headers.length + 1}" class="text-center !py-4"><button class="btn" onclick="tableLimit += 200; renderTable()">Show 200 more (${left} remaining)</button></td>`;
+    tb.appendChild(tr);
+  }
 }
 
-/* ---------------- Export ---------------- */
+function renderKpisAndBoard(c) {
+  $('stat-total').innerText = filteredData.length;
+  $('stat-daily').innerText = c.daily; $('stat-weekly').innerText = c.weekly;
+  $('stat-monthly').innerText = c.monthly; $('stat-yearly').innerText = c.yearly;
 
+  const perUser = {}, todayMap = {};
+  filteredData.forEach((row, i) => {
+    const m = meta(row);
+    const u = m.u ? fmt(m.u) : 'Unknown', t = m.t ? fmt(m.t) : 'General';
+    perUser[u] = (perUser[u] || 0) + 1;
+    if (c.todayRows.has(i)) { const k = u + '___' + t; todayMap[k] = (todayMap[k] || 0) + 1; }
+  });
+
+  // Leaderboard
+  const lb = $('leaderboard-container'); lb.innerHTML = '';
+  const names = Object.keys(perUser).sort((a, b) => perUser[b] - perUser[a]);
+  if (!names.length) lb.innerHTML = '<div class="sub text-center py-4 md:col-span-2">No users match the current filters.</div>';
+  const max = names.length ? perUser[names[0]] : 1;
+  const medal = ['#f59e0b', '#94a3b8', '#b45309'];
+  names.forEach((u, i) => {
+    const d = document.createElement('div');
+    d.className = 'flex items-center gap-3 p-3 rounded-xl border';
+    d.style.borderColor = 'var(--line)';
+    d.innerHTML = `<div class="w-8 h-8 rounded-lg grid place-items-center text-xs font-extrabold flex-shrink-0 text-white" style="background:${medal[i] || '#64748b66'}">${i + 1}</div>
+      <div class="flex-1 min-w-0"><div class="flex justify-between text-xs mb-1.5"><span class="font-bold truncate">${esc(u)}</span><span class="font-extrabold" style="color:var(--acc)">${perUser[u]}</span></div>
+      <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--line)"><div class="h-full rounded-full" style="width:${Math.round(perUser[u] / max * 100)}%;background:linear-gradient(90deg,#0d9488,#4f46e5)"></div></div></div>`;
+    lb.appendChild(d);
+  });
+
+  // Today's activity
+  const ind = k => todaySortCol === k ? (todaySortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  $('today-table-head').innerHTML = `<tr><th>#</th><th onclick="sortToday('user')">User${ind('user')}</th><th onclick="sortToday('task')">Task${ind('task')}</th><th class="text-right" onclick="sortToday('count')">Count${ind('count')}</th></tr>`;
+  let items = Object.keys(todayMap).map(k => { const p = k.split('___'); return { user: p[0], task: p[1], count: todayMap[k] }; });
+  if (todaySortCol) items.sort((a, b) => a[todaySortCol] < b[todaySortCol] ? (todaySortDir === 'asc' ? -1 : 1) : a[todaySortCol] > b[todaySortCol] ? (todaySortDir === 'asc' ? 1 : -1) : 0);
+  $('today-count-badge').innerText = c.todayRows.size + ' cases today';
+  $('today-activity-body').innerHTML = items.length ? items.map((it, i) =>
+    `<tr><td class="font-bold opacity-40">${i + 1}</td><td class="font-semibold">${esc(it.user)}</td><td><span class="chip">${esc(it.task)}</span></td><td class="text-right font-extrabold" style="color:var(--acc)">${it.count}</td></tr>`).join('')
+    : `<tr><td colspan="4" class="text-center opacity-50 !py-6">No activity recorded today.</td></tr>`;
+}
+
+let lastDark = null;
+function renderCharts(data, c) {
+  if (!headers.length) return;
+  c = c || compute(data);
+  const dark = document.documentElement.classList.contains('dark');
+  const tc = dark ? '#8b98b0' : '#64748b', gc = dark ? '#1b2437' : '#e5e9f1';
+  if (lastDark !== dark) { Object.values(charts).forEach(ch => ch.destroy()); charts = {}; lastDark = dark; } // theme changed: rebuild
+  const now = new Date();
+  const opts = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, precision: 0 } }, x: { grid: { display: false }, ticks: { color: tc } } } };
+  // Existing charts are updated in place (no destroy / re-create, no animation) = much faster
+  const make = (id, type, labels, values, color) => {
+    const ch = charts[id];
+    if (ch) { ch.data.labels = labels; ch.data.datasets[0].data = values; ch.update('none'); return; }
+    charts[id] = new Chart($(id).getContext('2d'), { type, data: { labels, datasets: [{ data: values, borderColor: color, backgroundColor: type === 'bar' ? color + 'cc' : color + '22',
+      fill: true, tension: .35, borderWidth: 2.5, pointRadius: 3, borderRadius: 6 }] }, options: opts });
+  };
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const week = [...Array(7)].map((_, i) => new Date(now.getTime() - (6 - i) * 864e5).toLocaleDateString('en-US', { weekday: 'short' }));
+  const tc2 = {}; data.forEach(r => { const t = meta(r).t; if (t) { const f = fmt(t); tc2[f] = (tc2[f] || 0) + 1; } });
+  make('yearlyChart', 'line', months, c.months, '#f59e0b');
+  make('monthlyChart', 'line', c.days.map((_, i) => i + 1), c.days, '#4f46e5');
+  make('weeklyChart', 'line', week, c.week, '#8b5cf6');
+  make('taskChart', 'bar', Object.keys(tc2).length ? Object.keys(tc2) : ['No tasks'], Object.keys(tc2).length ? Object.values(tc2) : [0], '#0d9488');
+}
+
+/* ---------- Export (exports the current filtered selection) ---------- */
 function exportCSV() {
-    if (filteredData.length === 0) return alert("No data to export!");
-    const csv = Papa.unparse(filteredData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'AppSheet_QA_Export.csv';
-    link.click();
+  if (!filteredData.length) return alert('No data to export!');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([Papa.unparse(filteredData)], { type: 'text/csv;charset=utf-8;' }));
+  a.download = 'AppSheet_QA_Export.csv'; a.click();
 }
-
-function toggleExcelMenu(e) {
-    e.stopPropagation();
-    document.getElementById('excel-menu').classList.toggle('hidden');
+function exportExcel() {
+  if (!filteredData.length) return alert('No data to export!');
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredData), 'QA Data');
+  XLSX.writeFile(wb, 'AppSheet_QA_Export.xlsx');
 }
-
-// mode: 'all-sheets'  = all data, one sheet per user
-//       'view-sheets' = current filter, one sheet per user
-//       'single'      = current filter, one sheet
-function exportExcel(mode) {
-    const src = mode === 'all-sheets' ? rawData : filteredData;
-    if (!src.length) return alert("No data to export!");
-
-    const wb = XLSX.utils.book_new();
-    if (mode === 'single') {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(src), 'QA Data');
-    } else {
-        const uk = getUserKey();
-        const groups = {};
-        src.forEach(r => {
-            const u = (r[uk] || 'Unknown').toString().trim();
-            (groups[u] = groups[u] || []).push(r);
-        });
-        const used = new Set();
-        Object.keys(groups).forEach(u => {
-            let name = u.replace(/[\[\]:*?\/\\]/g, '').slice(0, 31) || 'Sheet';
-            const base = name;
-            let i = 2;
-            while (used.has(name.toLowerCase())) name = base.slice(0, 28) + '_' + i++;
-            used.add(name.toLowerCase());
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(groups[u]), name);
-        });
-    }
-    XLSX.writeFile(wb, 'AppSheet_QA_Export.xlsx');
-}
-
-function exportPDF() { window.print(); }
 </script>
 </body>
 </html>
