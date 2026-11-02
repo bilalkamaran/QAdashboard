@@ -52,6 +52,7 @@ table th{padding:12px 14px;font-weight:700;color:var(--mute);font-size:11px;whit
 table td{padding:11px 14px;white-space:nowrap}
 tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
 .chip{display:inline-flex;align-items:center;gap:6px;background:#0d948818;color:var(--acc);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700}
+.chip-red{background:#f43f5e18;color:#e11d48}
 #sbk{display:none}
 @media (max-width:768px){
  #sidebar{position:fixed;top:0;left:0;bottom:0;width:280px!important;min-width:280px!important;transform:translateX(-100%);transition:transform .3s;z-index:40}
@@ -126,6 +127,7 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
     <button id="reset-btn" class="btn">Reset</button>
   </div>
   <div class="flex items-center gap-2 flex-shrink-0 frow">
+    <button class="btn" onclick="checkForChanges()" title="Refresh now">⟳</button>
     <button class="btn" onclick="document.documentElement.classList.toggle('dark');renderCharts(filteredData)" title="Toggle theme">◐</button>
     <button class="btn" onclick="exportCSV()">CSV</button>
     <button class="btn" onclick="exportExcel()">Excel</button>
@@ -164,6 +166,14 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
     <div class="card p-5"><div class="h-sec">This month, by day</div><div class="sub mb-3">Cases logged per day</div><div class="h-64"><canvas id="monthlyChart"></canvas></div></div>
     <div class="card p-5"><div class="h-sec">Last 7 days</div><div class="sub mb-3">Daily trend</div><div class="h-64"><canvas id="weeklyChart"></canvas></div></div>
     <div class="card p-5"><div class="h-sec">Tasks distribution</div><div class="sub mb-3">Cases per task</div><div class="h-64"><canvas id="taskChart"></canvas></div></div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="p-5 flex items-center justify-between border-b" style="border-color:var(--line)">
+      <div><div class="h-sec">Not active today</div><div class="sub">Users with no cases recorded today</div></div>
+      <span id="inactive-badge" class="chip chip-red">0 users</span>
+    </div>
+    <div id="inactive-list" class="p-5 grid gap-2.5 md:grid-cols-2 lg:grid-cols-3"></div>
   </div>
 
   <div class="card overflow-hidden">
@@ -359,7 +369,7 @@ function initData(data) {
   filterAndRender();   // re-applies restored filters / selected users
 }
 
-// fetch that gives up after 25 s (slow mobile networks / Apps Script cold start)
+// fetch that gives up after the given time (slow mobile networks / Apps Script cold start)
 function fetchT(url, ms = 60000) {
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
   return fetch(url, { signal: ac.signal }).finally(() => clearTimeout(t));
@@ -391,7 +401,7 @@ function loadData(silent) {
     }
   } catch (e) { data = Papa.parse(text, { header: true, skipEmptyLines: true }).data; }
 
-  // FIX: even when there are no records yet, keep watching so the first record appears live
+  // Even when there are no records yet, keep watching so the first record appears live
   if (lastSig === null) lastSig = '';
 
   if (!data || !data.length) {
@@ -429,7 +439,7 @@ const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTim
 /* ---------- Live updates ----------
    Google Sheets cannot push to a website, so the page asks a tiny endpoint (?check=1) every few seconds.
    The full data is downloaded only when a new row was added to any user tab. */
-const LIVE_CHECK_MS = 10000;
+const LIVE_CHECK_MS = 3000;   // was 10000: check for new rows every 3 seconds
 let lastSig = null;   // "tab:lastRow|tab:lastRow" signature of the data the page currently shows
 
 const api = q => targetUrl + (targetUrl.includes('?') ? '&' : '?') + q + '&t=' + Date.now();
@@ -445,19 +455,22 @@ function flattenSheets(obj) {
   return out;
 }
 
+// "checking" stops two checks from running at the same time (slow server = no pile-up)
+let checking = false;
 async function checkForChanges() {
-  // FIX: no "!rawData.length" check, so changes are also detected when the sheet started empty
-  if (document.hidden || isLoading || lastSig === null) return;
+  if (document.hidden || isLoading || checking || lastSig === null) return;
+  checking = true;
   try {
-    const j = await (await fetch(api('check=1'))).json();
+    const j = await (await fetchT(api('check=1'), 8000)).json();
     if (!j || j.sig === undefined || j.sig === lastSig) return;
     await fetchAdded();
   } catch (e) { console.error(e); }
+  finally { checking = false; }
 }
 
 // Downloads ONLY the new rows and adds them to the data already on the page
 async function fetchAdded() {
-  // FIX: first rows ever arrived -> one proper initial load (headers, users, tasks)
+  // First rows ever arrived -> one proper initial load (headers, users, tasks)
   if (!rawData.length) { await loadData(false); return; }
   isLoading = true;
   try {
@@ -513,6 +526,7 @@ function startLiveWatch() {
   clearInterval(refreshTimer);
   refreshTimer = setInterval(checkForChanges, LIVE_CHECK_MS);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForChanges(); });
+  window.addEventListener('focus', checkForChanges);
 }
 
 // Applies fresh data without resetting the user's filters, sort order or selected users
@@ -598,7 +612,7 @@ function buildFilters() {
 function renderUsers() {
   const q = $('u-search').value.toLowerCase().trim();
   const list = $('ulist');
-  const keepScroll = list.scrollTop;   // FIX: remember the scroll position
+  const keepScroll = list.scrollTop;   // remember the scroll position
   list.innerHTML = '';
   const names = Object.keys(userTotals).sort((a, b) => userTotals[b] - userTotals[a]).filter(n => !q || n.toLowerCase().includes(q));
   $('u-total').innerText = `(${Object.keys(userTotals).length})`;
@@ -618,7 +632,7 @@ function renderUsers() {
     });
     list.appendChild(el);
   });
-  list.scrollTop = keepScroll;      // FIX: restore the scroll position
+  list.scrollTop = keepScroll;      // restore the scroll position
 }
 const scheduleFilter = debounce(filterAndRender, 60);
 function selectAllUsers() { Object.keys(userTotals).forEach(u => selectedUsers.add(u)); renderUsers(); filterAndRender(); }
@@ -689,6 +703,35 @@ function renderDash() {
   const c = compute(filteredData);
   renderKpisAndBoard(c);
   renderCharts(filteredData, c);
+  renderInactive();   // NEW: users with no cases today
+}
+
+/* NEW: users who have not recorded any case today.
+   Uses ALL data (not the date filter), so "today" is always the real today.
+   Respects the sidebar user selection. */
+function renderInactive() {
+  const day = new Date().setHours(0, 0, 0, 0);
+  const activeToday = new Set(), lastSeen = {};
+  rawData.forEach(r => {
+    const m = meta(r); if (!m.d || !m.u) return;
+    if (m.day === day) activeToday.add(m.u);
+    if (m.day <= day && (!lastSeen[m.u] || m.day > lastSeen[m.u])) lastSeen[m.u] = m.day;
+  });
+  let users = Object.keys(userTotals);
+  if (selectedUsers.size) users = users.filter(u => selectedUsers.has(u));
+  const off = users.filter(u => !activeToday.has(u)).sort((a, b) => (lastSeen[b] || 0) - (lastSeen[a] || 0));
+
+  $('inactive-badge').innerText = `${off.length} of ${users.length} users`;
+  const box = $('inactive-list');
+  if (!off.length) { box.innerHTML = '<div class="sub text-center py-2 md:col-span-3">Everyone has worked today 🎉</div>'; return; }
+  box.innerHTML = off.map(u => {
+    const last = lastSeen[u] ? new Date(lastSeen[u]).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'never';
+    return `<div class="flex items-center gap-3 p-3 rounded-xl border" style="border-color:var(--line)">
+      <span class="av" style="background:${avatarColor(u)}">${esc(initials(formatText(u)))}</span>
+      <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${esc(formatText(u))}</div>
+      <div class="sub">Last worked: ${last}</div></div>
+      <span class="chip chip-red">0 today</span></div>`;
+  }).join('');
 }
 
 function renderScope() {
@@ -816,8 +859,8 @@ function exportExcel() {
 }
 
 /* ---------- Start ---------- */
-/* ---------- Mobile browsers often discard a background tab and reload it.
-   The last data and your filters are kept on the device, so the page comes back instantly. ---------- */
+/* Mobile browsers often discard a background tab and reload it.
+   The last data and your filters are kept on the device, so the page comes back instantly. */
 const idb = () => new Promise((res, rej) => { const r = indexedDB.open('qa-dash', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 const cacheGet = async () => { try { const db = await idb(); return await new Promise(res => { const q = db.transaction('kv').objectStore('kv').get('data'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); } catch (e) { return null; } };
 const saveCache = debounce(async () => {
