@@ -157,11 +157,8 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
 
   <div class="card overflow-hidden">
     <div class="p-5 flex flex-wrap items-center justify-between gap-3 border-b" style="border-color:var(--line)">
-      <div><div class="h-sec">Leaderboard</div><div class="sub">Cases per user · daily target progress</div></div>
-      <div class="flex items-center gap-2"><span class="sub">Daily target</span>
-        <input id="all-target" type="number" min="0" class="ctl !py-1.5 w-20" value="30">
-        <button class="btn btn-pri" onclick="setAllTargets()" title="Set this target for every user">Apply to all</button>
-        <span class="chip">Live</span></div>
+      <div><div class="h-sec">Leaderboard</div><div class="sub">Cases per user</div></div>
+      <span class="chip">Live</span>
     </div>
     <div id="leaderboard-container" class="p-5 grid gap-2.5 md:grid-cols-2"></div>
   </div>
@@ -182,8 +179,11 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
   </div>
 
   <div class="card overflow-hidden">
-    <div class="p-5 flex items-center justify-between border-b" style="border-color:var(--line)">
-      <div class="h-sec">Today's activity</div><span id="today-count-badge" class="chip">0 cases today</span>
+    <div class="p-5 flex flex-wrap items-center justify-between gap-3 border-b" style="border-color:var(--line)">
+      <div class="flex items-center gap-3"><div class="h-sec">Today's activity</div><span id="today-count-badge" class="chip">0 cases today</span></div>
+      <div class="flex items-center gap-2"><span class="sub">Daily target</span>
+        <input id="all-target" type="number" min="0" class="ctl !py-1.5 w-20" value="30">
+        <button class="btn btn-pri" onclick="setAllTargets()" title="Set this target for every user">Apply to all</button></div>
     </div>
     <div class="overflow-x-auto"><table class="w-full text-left text-xs">
       <thead id="today-table-head" class="select-none cursor-pointer"></thead>
@@ -448,7 +448,7 @@ const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTim
 /* ---------- Live updates ----------
    Google Sheets cannot push to a website, so the page asks a tiny endpoint (?check=1) every few seconds.
    The full data is downloaded only when a new row was added to any user tab. */
-const LIVE_CHECK_MS = 3000;   // was 10000: check for new rows every 3 seconds
+const LIVE_CHECK_MS = 3000;   // check for new rows every 3 seconds
 let lastSig = null;   // "tab:lastRow|tab:lastRow" signature of the data the page currently shows
 
 const api = q => targetUrl + (targetUrl.includes('?') ? '&' : '?') + q + '&t=' + Date.now();
@@ -793,45 +793,53 @@ function renderKpisAndBoard(c) {
   $('stat-daily').innerText = c.daily; $('stat-weekly').innerText = c.weekly;
   $('stat-monthly').innerText = c.monthly; $('stat-yearly').innerText = c.yearly;
 
-  const perUser = {}, todayMap = {};
-  filteredData.forEach((row, i) => {
+  const perUser = {};
+  filteredData.forEach(row => {
     const m = meta(row);
-    const raw = m.u || 'Unknown', u = m.u ? fmt(m.u) : 'Unknown', t = m.t ? fmt(m.t) : 'General';
+    const raw = m.u || 'Unknown';
     perUser[raw] = (perUser[raw] || 0) + 1;
-    if (c.todayRows.has(i)) { const k = u + '___' + t; todayMap[k] = (todayMap[k] || 0) + 1; }
   });
 
-  // Leaderboard + daily target progress (target is always compared with TODAY's cases)
-  const todayC = todayCounts();
+  // Leaderboard (general data only, no targets)
   const lb = $('leaderboard-container'); lb.innerHTML = '';
   const names = Object.keys(perUser).sort((a, b) => perUser[b] - perUser[a]);
   if (!names.length) lb.innerHTML = '<div class="sub text-center py-4 md:col-span-2">No users match the current filters.</div>';
   const max = names.length ? perUser[names[0]] : 1;
   const medal = ['#f59e0b', '#94a3b8', '#b45309'];
   names.forEach((u, i) => {
-    const tg = getTarget(u), today = todayC[u] || 0, pct = tg > 0 ? Math.round(today / tg * 100) : 0, col = pctColor(pct);
     const d = document.createElement('div');
     d.className = 'flex items-center gap-3 p-3 rounded-xl border';
     d.style.borderColor = 'var(--line)';
     d.innerHTML = `<div class="w-8 h-8 rounded-lg grid place-items-center text-xs font-extrabold flex-shrink-0 text-white" style="background:${medal[i] || '#64748b66'}">${i + 1}</div>
       <div class="flex-1 min-w-0"><div class="flex justify-between text-xs mb-1.5"><span data-user="${esc(u)}" class="font-bold truncate cursor-pointer hover:underline" title="Open user page">${esc(fmt(u))}</span><span class="font-extrabold" style="color:var(--acc)">${perUser[u]}</span></div>
-      <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--line)"><div class="h-full rounded-full" style="width:${Math.round(perUser[u] / max * 100)}%;background:linear-gradient(90deg,#0d9488,#4f46e5)"></div></div>
-      <div class="flex items-center gap-2 mt-2.5"><span class="sub">Today</span><b class="text-[11px]">${today} /</b>
-        <input type="number" min="0" data-u="${esc(u)}" value="${tg}" onchange="setTarget(this.dataset.u,this.value)" class="ctl !py-0.5 !px-1.5 !text-[11px] w-16" title="Daily target">
-        <span class="text-[11px] font-extrabold ml-auto" style="color:${tg > 0 ? col : 'var(--mute)'}">${tg > 0 ? pct + '%' : 'no target'}</span></div>
-      ${tg > 0 ? `<div class="pb mt-1.5"><i style="width:${Math.min(100, pct)}%;background:${col}"></i></div>` : ''}</div>`;
+      <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--line)"><div class="h-full rounded-full" style="width:${Math.round(perUser[u] / max * 100)}%;background:linear-gradient(90deg,#0d9488,#4f46e5)"></div></div></div>`;
     lb.appendChild(d);
   });
 
-  // Today's activity
-  const ind = k => todaySortCol === k ? (todaySortDir === 'asc' ? ' ▲' : ' ▼') : '';
-  $('today-table-head').innerHTML = `<tr><th>#</th><th onclick="sortToday('user')">User${ind('user')}</th><th onclick="sortToday('task')">Task${ind('task')}</th><th class="text-right" onclick="sortToday('count')">Count${ind('count')}</th></tr>`;
-  let items = Object.keys(todayMap).map(k => { const p = k.split('___'); return { user: p[0], task: p[1], count: todayMap[k] }; });
+  // Today's activity, one row per user, with daily target
+  const tu = {};
+  filteredData.forEach((row, i) => {
+    if (!c.todayRows.has(i)) return;
+    const m = meta(row), raw = m.u || 'Unknown', t = m.t ? fmt(m.t) : 'General';
+    const o = tu[raw] || (tu[raw] = { raw, user: fmt(raw), count: 0, pct: 0, tasks: {} });
+    o.count++; o.tasks[t] = (o.tasks[t] || 0) + 1;
+  });
+  let items = Object.values(tu);
+  items.forEach(it => { const tg = getTarget(it.raw); it.pct = tg > 0 ? Math.round(it.count / tg * 100) : 0; });
   if (todaySortCol) items.sort((a, b) => a[todaySortCol] < b[todaySortCol] ? (todaySortDir === 'asc' ? -1 : 1) : a[todaySortCol] > b[todaySortCol] ? (todaySortDir === 'asc' ? 1 : -1) : 0);
+  else items.sort((a, b) => b.count - a.count);
+  const ind = k => todaySortCol === k ? (todaySortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  $('today-table-head').innerHTML = `<tr><th>#</th><th onclick="sortToday('user')">User${ind('user')}</th><th>Tasks</th><th class="text-right" onclick="sortToday('count')">Today${ind('count')}</th><th>Target</th><th onclick="sortToday('pct')">Progress${ind('pct')}</th></tr>`;
   $('today-count-badge').innerText = c.todayRows.size + ' cases today';
-  $('today-activity-body').innerHTML = items.length ? items.map((it, i) =>
-    `<tr><td class="font-bold opacity-40">${i + 1}</td><td class="font-semibold">${esc(it.user)}</td><td><span class="chip">${esc(it.task)}</span></td><td class="text-right font-extrabold" style="color:var(--acc)">${it.count}</td></tr>`).join('')
-    : `<tr><td colspan="4" class="text-center opacity-50 !py-6">No activity recorded today.</td></tr>`;
+  $('today-activity-body').innerHTML = items.length ? items.map((it, i) => {
+    const tg = getTarget(it.raw), col = pctColor(it.pct);
+    return `<tr><td class="font-bold opacity-40">${i + 1}</td>
+      <td class="font-semibold">${esc(it.user)}</td>
+      <td>${Object.entries(it.tasks).map(([t, n]) => `<span class="chip">${esc(t)} · ${n}</span>`).join(' ')}</td>
+      <td class="text-right font-extrabold" style="color:var(--acc)">${it.count}</td>
+      <td><input type="number" min="0" data-u="${esc(it.raw)}" value="${tg}" onchange="setTarget(this.dataset.u,this.value)" class="ctl !py-0.5 !px-1.5 !text-[11px] w-16"></td>
+      <td style="min-width:150px">${tg > 0 ? `<div class="flex items-center gap-2"><div class="pb flex-1"><i style="width:${Math.min(100, it.pct)}%;background:${col}"></i></div><b style="color:${col}">${it.pct}%</b></div>` : '<span class="sub">no target</span>'}</td></tr>`;
+  }).join('') : `<tr><td colspan="6" class="text-center opacity-50 !py-6">No activity recorded today.</td></tr>`;
 }
 
 let lastDark = null;
@@ -870,59 +878,52 @@ function saveTargets() { try { localStorage.setItem('qa-targets', JSON.stringify
 const cleanNum = v => { v = parseInt(v, 10); return v > 0 ? v : 0; };
 const getTarget = u => (u in targets) ? targets[u] : defaultTarget;
 const pctColor = p => p >= 100 ? '#10b981' : p >= 50 ? '#f59e0b' : '#f43f5e';
-function refreshTargetViews() { renderDash(); if (curUser) renderUserPanel(); }
+function refreshTargetViews() { renderDash(); }
 function setTarget(u, v) { targets[u] = cleanNum(v); saveTargets(); refreshTargetViews(); }
 function setAllTargets() { defaultTarget = cleanNum($('all-target').value); targets = {}; saveTargets(); refreshTargetViews(); }
-function todayCounts() {
-  const day = new Date().setHours(0, 0, 0, 0), o = {};
-  rawData.forEach(r => { const m = meta(r); if (m.d && m.u && m.day === day) o[m.u] = (o[m.u] || 0) + 1; });
-  return o;
-}
 function toggleTheme() { document.documentElement.classList.toggle('dark'); renderCharts(filteredData); if (curUser) renderUserPanel(); }
 
-/* ---------- User page (side panel) ---------- */
-let curUser = null, uRange = '30', uChart = null;
+/* ---------- User page (side panel): no targets, no streaks, choose a period ---------- */
+let curUser = null, uRange = '30', uFrom = '', uTo = '', uChart = null;
 const upanel = $('upanel'), ubk = $('ubk');
 function openUser(u) { curUser = u; uRange = '30'; renderUserPanel(); ubk.classList.remove('hidden'); upanel.style.transform = 'none'; }
 function closeUser() { curUser = null; upanel.style.transform = 'translateX(100%)'; ubk.classList.add('hidden'); if (uChart) { uChart.destroy(); uChart = null; } }
-function setURange(r) { uRange = r; renderUserPanel(); }
 document.addEventListener('click', e => { const el = e.target.closest('[data-user]'); if (el) openUser(el.dataset.user); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && curUser) closeUser(); });
 
-function userStats(u) {
-  const now = new Date(), Y = now.getFullYear(), M = now.getMonth(), day0 = new Date(Y, M, now.getDate()).getTime();
-  const s = { dayMap: {}, tasks: {}, taskToday: {}, months: Array(12).fill(0), total: 0, month: 0, day0 };
+function setURange(r) { uRange = r; renderUserPanel(); }
+function setUCustom() { uFrom = $('u-from').value; uTo = $('u-to').value; uRange = 'custom'; renderUserPanel(); }
+function uBounds() {
+  const n = new Date(), d0 = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  if (uRange === '7') return [new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - 6), d0];
+  if (uRange === '30') return [new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - 29), d0];
+  if (uRange === 'month') return [new Date(n.getFullYear(), n.getMonth(), 1), d0];
+  const a = parseInputDate(uFrom) || d0, b = parseInputDate(uTo) || d0;
+  return a <= b ? [a, b] : [b, a];
+}
+function userStats(u, from, to) {
+  const s = { dayMap: {}, tasks: {}, total: 0, range: 0, day0: new Date().setHours(0, 0, 0, 0) };
+  const f = from.getTime(), t = to.getTime();
   rawData.forEach(r => {
     const m = meta(r); if (m.u !== u) return;
-    s.total++;
-    const t = m.t ? fmt(m.t) : 'General';
-    s.tasks[t] = (s.tasks[t] || 0) + 1;
-    if (!m.d) return;
+    s.total++; if (!m.d) return;
     s.dayMap[m.day] = (s.dayMap[m.day] || 0) + 1;
-    if (m.day === day0) s.taskToday[t] = (s.taskToday[t] || 0) + 1;
-    if (m.y === Y) { s.months[m.mo]++; if (m.mo === M) s.month++; }
+    if (m.day >= f && m.day <= t) { s.range++; const k = m.t ? fmt(m.t) : 'General'; s.tasks[k] = (s.tasks[k] || 0) + 1; }
   });
   return s;
 }
-// ok(count) decides if a day counts. Current streak survives while today is still unfinished.
-function streaks(dayMap, day0, ok) {
-  const days = Object.keys(dayMap).map(Number).filter(d => d <= day0 && ok(dayMap[d])).sort((a, b) => a - b);
-  let best = 0, run = 0, prev = null;
-  days.forEach(d => { run = (prev !== null && Math.round((d - prev) / 864e5) === 1) ? run + 1 : 1; if (run > best) best = run; prev = d; });
-  const d = new Date(day0), good = t => dayMap[t] !== undefined && ok(dayMap[t]);
-  if (!good(d.getTime())) d.setDate(d.getDate() - 1);
-  let cur = 0; while (good(d.getTime())) { cur++; d.setDate(d.getDate() - 1); }
-  return { cur, best };
-}
-
 function renderUserPanel() {
   if (!curUser) return;
-  const u = curUser, s = userStats(u), tg = getTarget(u), today = s.dayMap[s.day0] || 0;
-  const pct = tg > 0 ? Math.round(today / tg * 100) : 0, col = pctColor(pct);
-  const a = streaks(s.dayMap, s.day0, c => c > 0), b = tg > 0 ? streaks(s.dayMap, s.day0, c => c >= tg) : { cur: 0, best: 0 };
-  const kp = (l, v, c) => `<div class="card p-3"><div class="sub">${l}</div><div class="text-xl font-extrabold mt-1" style="color:${c || 'var(--ink)'}">${v}</div></div>`;
+  const u = curUser, [from, to] = uBounds(), s = userStats(u, from, to);
+  const labels = [], values = []; let best = 0, days = 0;
+  for (let d = new Date(from); d <= to && days < 731; d.setDate(d.getDate() + 1), days++) {
+    const v = s.dayMap[d.getTime()] || 0; labels.push(d.getDate() + '/' + (d.getMonth() + 1)); values.push(v); if (v > best) best = v;
+  }
+  const avg = days ? (s.range / days).toFixed(1) : 0;
+  const kp = (l, v) => `<div class="card p-3"><div class="sub">${l}</div><div class="text-xl font-extrabold mt-1">${v}</div></div>`;
   const tasks = Object.entries(s.tasks).sort((x, y) => y[1] - x[1]), tmax = tasks.length ? tasks[0][1] : 1;
   const keep = upanel.scrollTop;
+  const rb = (k, l) => `<button class="${uRange === k ? 'on' : ''}" onclick="setURange('${k}')">${l}</button>`;
 
   upanel.innerHTML = `
   <div class="flex items-center gap-3 mb-4">
@@ -930,49 +931,31 @@ function renderUserPanel() {
     <div class="flex-1 min-w-0"><div class="text-lg font-extrabold truncate">${esc(formatText(u))}</div><div class="sub">${s.total} cases in total</div></div>
     <button class="btn" onclick="closeUser()">✕</button>
   </div>
-
-  <div class="card p-4 mb-4">
-    <div class="flex items-center justify-between mb-2"><div class="h-sec">Today's target</div>
-      <div class="flex items-center gap-2"><b class="text-sm">${today} /</b>
-      <input type="number" min="0" data-u="${esc(u)}" value="${tg}" onchange="setTarget(this.dataset.u,this.value)" class="ctl !py-1 w-20"></div></div>
-    ${tg > 0 ? `<div class="pb"><i style="width:${Math.min(100, pct)}%;background:${col}"></i></div>
-    <div class="sub mt-1.5" style="color:${col}">${pct}% achieved${today >= tg ? ' 🎉' : ' · ' + (tg - today) + ' to go'}</div>` : '<div class="sub">No target set.</div>'}
+  <div class="card p-3 mb-4 space-y-2.5">
+    <div class="seg">${rb('7', '7 days')}${rb('30', '30 days')}${rb('month', 'This month')}${rb('custom', 'Custom')}</div>
+    <div class="flex items-center gap-1.5 ctl !py-1.5">
+      <input type="date" id="u-from" value="${uRange === 'custom' ? uFrom : toLocalISO(from)}" onchange="setUCustom()" class="bg-transparent outline-none">
+      <span class="opacity-40">–</span>
+      <input type="date" id="u-to" value="${uRange === 'custom' ? uTo : toLocalISO(to)}" onchange="setUCustom()" class="bg-transparent outline-none">
+    </div>
   </div>
-
   <div class="grid grid-cols-2 gap-3 mb-4">
-    ${kp('Today', today)}${kp('This month', s.month)}
-    ${kp('Current streak 🔥', a.cur + (a.cur === 1 ? ' day' : ' days'), '#f59e0b')}${kp('Best streak', a.best + (a.best === 1 ? ' day' : ' days'))}
-    ${tg > 0 ? kp('Target streak', b.cur + (b.cur === 1 ? ' day' : ' days'), '#10b981') + kp('Best target streak', b.best + (b.best === 1 ? ' day' : ' days')) : ''}
+    ${kp('Today', s.dayMap[s.day0] || 0)}${kp('In selected period', s.range)}
+    ${kp('Daily average', avg)}${kp('Best day', best)}
   </div>
-
-  <div class="card p-4 mb-4">
-    <div class="flex items-center justify-between mb-3"><div class="h-sec">Activity</div>
-      <div class="seg"><button class="${uRange === '30' ? 'on' : ''}" onclick="setURange('30')">30 days</button><button class="${uRange === 'year' ? 'on' : ''}" onclick="setURange('year')">This year</button></div></div>
-    <div style="height:220px"><canvas id="uChart"></canvas></div>
-  </div>
-
+  <div class="card p-4 mb-4"><div class="h-sec mb-3">Activity</div><div style="height:220px"><canvas id="uChart"></canvas></div></div>
   <div class="card p-4">
-    <div class="h-sec mb-3">Tasks</div>
-    ${tasks.length ? tasks.map(([t, n]) => `<div class="mb-3"><div class="flex justify-between text-xs mb-1"><span class="font-bold truncate">${esc(t)}${s.taskToday[t] ? ` <span class="chip">${s.taskToday[t]} today</span>` : ''}</span><span class="font-extrabold" style="color:var(--acc)">${n}</span></div>
-      <div class="pb"><i style="width:${Math.round(n / tmax * 100)}%;background:linear-gradient(90deg,#0d9488,#4f46e5)"></i></div></div>`).join('') : '<div class="sub">No cases yet.</div>'}
+    <div class="h-sec mb-3">Tasks (selected period)</div>
+    ${tasks.length ? tasks.map(([t, n]) => `<div class="mb-3"><div class="flex justify-between text-xs mb-1"><span class="font-bold truncate">${esc(t)}</span><span class="font-extrabold" style="color:var(--acc)">${n}</span></div>
+      <div class="pb"><i style="width:${Math.round(n / tmax * 100)}%;background:linear-gradient(90deg,#0d9488,#4f46e5)"></i></div></div>`).join('') : '<div class="sub">No cases in this period.</div>'}
   </div>`;
   upanel.scrollTop = keep;
 
-  // personal chart
   if (uChart) { uChart.destroy(); uChart = null; }
   const dark = document.documentElement.classList.contains('dark'), tc = dark ? '#8b98b0' : '#64748b', gc = dark ? '#1b2437' : '#e5e9f1';
-  let labels, values;
-  if (uRange === 'year') { labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; values = s.months; }
-  else {
-    labels = []; values = [];
-    const n = new Date();
-    for (let i = 29; i >= 0; i--) { const d = new Date(n.getFullYear(), n.getMonth(), n.getDate() - i); labels.push(d.getDate() + '/' + (d.getMonth() + 1)); values.push(s.dayMap[d.getTime()] || 0); }
-  }
-  const sets = [{ type: 'bar', data: values, backgroundColor: '#0d9488cc', borderRadius: 5 }];
-  if (uRange === '30' && tg > 0) sets.push({ type: 'line', data: values.map(() => tg), borderColor: '#f59e0b', borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false });
-  uChart = new Chart($('uChart').getContext('2d'), { data: { labels, datasets: sets }, options: { responsive: true, maintainAspectRatio: false, animation: false,
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, precision: 0 } }, x: { grid: { display: false }, ticks: { color: tc, maxRotation: 0, autoSkip: true } } } } });
+  uChart = new Chart($('uChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ data: values, backgroundColor: '#0d9488cc', borderRadius: 5 }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, precision: 0 } }, x: { grid: { display: false }, ticks: { color: tc, maxRotation: 0, autoSkip: true } } } } });
 }
 
 /* ---------- Export (exports the current filtered selection) ---------- */
