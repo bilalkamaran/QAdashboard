@@ -835,8 +835,8 @@ function renderKpisAndBoard(c) {
     const tg = getTarget(it.raw), col = pctColor(it.pct);
     return `<tr><td class="font-bold opacity-40">${i + 1}</td>
       <td class="font-semibold">${esc(it.user)}</td>
-      <td>${Object.entries(it.tasks).map(([t, n]) => `<span class="chip">${esc(t)} · ${n}</span>`).join(' ')}</td>
-      <td class="text-right font-extrabold" style="color:var(--acc)">${it.count}</td>
+<td>${Object.keys(it.tasks).map(t => `<span class="chip">${esc(t)}</span>`).join(' ')}</td>
+<td class="text-right font-extrabold" style="color:var(--acc)">${it.count}</td>
       <td><input type="number" min="0" data-u="${esc(it.raw)}" value="${tg}" onchange="setTarget(this.dataset.u,this.value)" class="ctl !py-0.5 !px-1.5 !text-[11px] w-16"></td>
       <td style="min-width:150px">${tg > 0 ? `<div class="flex items-center gap-2"><div class="pb flex-1"><i style="width:${Math.min(100, it.pct)}%;background:${col}"></i></div><b style="color:${col}">${it.pct}%</b></div>` : '<span class="sub">no target</span>'}</td></tr>`;
   }).join('') : `<tr><td colspan="6" class="text-center opacity-50 !py-6">No activity recorded today.</td></tr>`;
