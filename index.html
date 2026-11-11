@@ -9,8 +9,7 @@
 <link rel="preconnect" href="https://script.google.com">
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onload="chartLoaded()"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f3f5f9;--card:#fff;--line:#e5e9f1;--ink:#0f1629;--mute:#64748b;--acc:#0d9488;--acc2:#4f46e5;--side:#0b1120}
@@ -28,7 +27,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .seg button.on{background:var(--acc);color:#fff}
 .h-sec{font-size:13px;font-weight:800;letter-spacing:-.01em}
 .sub{font-size:11px;color:var(--mute);font-weight:500}
-/* Sidebar */
 #sidebar{width:290px;min-width:290px;background:var(--side);color:#cbd5e1;transition:width .3s,min-width .3s}
 #sidebar.collapsed{width:76px;min-width:76px}
 #sidebar.collapsed .st{display:none!important}
@@ -66,6 +64,45 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
 .pb{height:6px;border-radius:99px;overflow:hidden;background:var(--line)}
 .pb>i{display:block;height:100%;border-radius:99px;transition:width .4s}
 @media print{#sidebar,header,#status-el,#upanel,#ubk{display:none!important}body{overflow:visible;height:auto}}
+
+/* ================= SOFT GLASS THEME ================= */
+:root{--glass:rgba(255,255,255,.58);--glass-strong:rgba(255,255,255,.82);--glass-line:rgba(255,255,255,.75);--glass-shadow:0 8px 32px -8px rgba(31,38,135,.18);--blur:blur(18px) saturate(170%)}
+.dark{--glass:rgba(15,22,38,.55);--glass-strong:rgba(15,22,38,.88);--glass-line:rgba(255,255,255,.09);--glass-shadow:0 8px 32px -8px rgba(0,0,0,.6)}
+body{background:var(--bg)}
+body::before,body::after{content:"";position:fixed;z-index:-1;width:60vmax;height:60vmax;border-radius:50%;filter:blur(90px);opacity:.55;pointer-events:none;animation:float 22s ease-in-out infinite alternate}
+body::before{top:-20vmax;left:-15vmax;background:radial-gradient(circle,#0d9488 0%,transparent 65%)}
+body::after{bottom:-25vmax;right:-15vmax;background:radial-gradient(circle,#4f46e5 0%,transparent 65%);animation-delay:-8s}
+.dark body::before,.dark body::after{opacity:.35}
+@keyframes float{0%{transform:translate(0,0) scale(1)}100%{transform:translate(6vmax,5vmax) scale(1.15)}}
+.card{background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--glass-line);border-radius:22px;box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.55);transition:transform .25s ease,box-shadow .25s ease}
+.dark .card{box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.06)}
+.kpi:hover,#page-dashboard .grid>.card:hover{transform:translateY(-3px);box-shadow:0 16px 40px -12px rgba(13,148,136,.35),inset 0 1px 0 rgba(255,255,255,.6)}
+.kpi:before{width:5px;box-shadow:0 0 16px var(--k)}
+.kpi b{background:linear-gradient(135deg,var(--ink),var(--k));-webkit-background-clip:text;background-clip:text;color:transparent}
+header{background:var(--glass)!important;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-color:var(--glass-line)!important}
+#sidebar{background:linear-gradient(180deg,rgba(11,17,32,.82),rgba(11,17,32,.7));-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-right:1px solid rgba(255,255,255,.08)}
+.navb.on{box-shadow:0 10px 28px -8px #0d9488cc}
+.ctl,.btn,.seg{background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-color:var(--glass-line)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px -6px #0d948866}
+.btn-pri{background:linear-gradient(135deg,#0d9488,#4f46e5);border-color:transparent}
+.btn-pri:hover{background:linear-gradient(135deg,#0f766e,#4338ca);color:#fff}
+.seg button.on{background:linear-gradient(135deg,#0d9488,#4f46e5);box-shadow:0 4px 12px -4px #0d9488aa}
+.pb{height:8px}
+#table-wrap,#page-main .card,#page-dashboard .overflow-x-auto{-webkit-backdrop-filter:none;backdrop-filter:none}
+#page-main .card{background:var(--glass-strong)}
+#table-head{background:var(--glass-strong)!important}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:rgba(13,148,136,.08)}
+#upanel{background:var(--glass-strong)!important;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:-20px 0 60px -20px rgba(0,0,0,.35)}
+.chip{box-shadow:inset 0 0 0 1px rgba(13,148,136,.25)}
+#status-el{border-radius:99px}
+::-webkit-scrollbar-thumb{background:linear-gradient(#0d9488,#4f46e5);border-radius:9px}
+@media (max-width:768px){
+ .card,header,.ctl,.btn,.seg{-webkit-backdrop-filter:none;backdrop-filter:none}
+ .card{background:var(--glass-strong)}
+ body::before,body::after{animation:none;filter:blur(60px)}
+}
+@media (prefers-reduced-motion:reduce){body::before,body::after{animation:none}.card,.btn{transition:none}}
 </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col antialiased">
@@ -90,7 +127,6 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
       <span class="st">Data Records</span></button>
   </nav>
 
-  <!-- USERS PANEL -->
   <div class="flex flex-col flex-1 min-h-0 gap-2.5">
     <div class="st flex items-center justify-between px-1">
       <span class="text-[11px] font-bold text-slate-400">Team members <span id="u-total" class="text-slate-500"></span></span>
@@ -129,17 +165,15 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
     <button id="reset-btn" class="btn">Reset</button>
   </div>
   <div class="flex items-center gap-2 flex-shrink-0 frow">
-    <button class="btn" onclick="checkForChanges()" title="Refresh now">⟳</button>
+    <button class="btn" id="refresh-btn" onclick="manualRefresh()" title="Refresh now"><span id="refresh-ico" class="inline-block">⟳</span></button>
     <button class="btn" onclick="toggleTheme()" title="Toggle theme">◐</button>
     <button class="btn" onclick="exportCSV()">CSV</button>
     <button class="btn" onclick="exportExcel()">Excel</button>
-    <button class="btn btn-pri" onclick="window.print()">Print / PDF</button>
   </div>
 </header>
 
 <div class="flex-1 overflow-y-auto p-6 pb-24">
 
-<!-- DASHBOARD -->
 <div id="page-dashboard" class="space-y-6">
   <div class="flex flex-wrap items-end justify-between gap-3">
     <div><h2 class="text-xl font-extrabold tracking-tight">Performance overview</h2>
@@ -191,7 +225,6 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
   </div>
 </div>
 
-<!-- DATA EXPLORER -->
 <div id="page-main" class="hidden">
   <div class="card overflow-hidden">
     <div class="p-5 border-b" style="border-color:var(--line)"><div class="h-sec">Records explorer</div><div class="sub">Click a column title to sort. Type under a title to filter.</div></div>
@@ -205,7 +238,6 @@ tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
 </main>
 </div>
 
-<!-- USER PANEL -->
 <div id="ubk" onclick="closeUser()" class="hidden fixed inset-0" style="background:#0007;z-index:60"></div>
 <aside id="upanel" class="fixed top-0 right-0 bottom-0 w-full overflow-y-auto p-5" style="max-width:480px;z-index:70;background:var(--bg);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .3s"></aside>
 
@@ -219,13 +251,33 @@ const targetUrl = 'https://script.google.com/macros/s/AKfycbz0V2hziwVZG0tAS7jXcL
 const DATE_ORDER = 'MDY';
 const MAX_COLUMNS = 7;
 
-// Sheet tabs that must never be treated as a user (compared in lower case)
+/* ---------- FAST START ----------
+   1) If there is no saved copy on this device, the data request starts right now,
+      in parallel with the scripts (it does not wait for Chart.js / Papa).
+   2) Chart.js draws the charts the moment it arrives.
+   3) The Excel library is loaded only when the Excel button is clicked. */
+let earlyReq = null;
+try {
+  if (!localStorage.getItem('qa-has-cache')) {
+    const eu = targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'after=&t=' + Date.now();
+    earlyReq = (() => {
+      const ac = new AbortController(), t = setTimeout(() => ac.abort(), 60000);
+      return fetch(eu, { signal: ac.signal }).then(r => r.text()).finally(() => clearTimeout(t));
+    })();
+    earlyReq.catch(() => {});
+  }
+} catch (e) {}
+function chartLoaded() { if (rawData.length) renderDash(); }
+const loadScript = src => new Promise((res, rej) => {
+  const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+});
+
 const EXCLUDED_SHEETS = ['dashboard'];
-let sheetMode = false;   // true when the server returns one list of rows per sheet tab (one tab = one user)
+let sheetMode = false;
 let rawData = [], filteredData = [], headers = [];
 let userKey = '', taskKey = '';
-let userTotals = {};              // total cases per user (all data)
-let selectedUsers = new Set();    // empty set = all users
+let userTotals = {};
+let selectedUsers = new Set();
 let columnFilters = {};
 let sortCol = null, sortDir = 'asc', todaySortCol = null, todaySortDir = 'asc';
 let charts = {};
@@ -278,7 +330,6 @@ function getDateKey() {
   if (dateKeyCache && headers.includes(dateKeyCache)) return dateKeyCache;
   return dateKeyCache = headers.find(h => h.toLowerCase() === 'date') || headers.find(h => /date|time|created|stamp/i.test(h)) || null;
 }
-// Parsed dates are cached per row so thousands of rows are not re-parsed on every update
 const dateCache = new WeakMap();
 const getRowDate = row => {
   if (dateCache.has(row)) return dateCache.get(row);
@@ -286,11 +337,9 @@ const getRowDate = row => {
   dateCache.set(row, d); return d;
 };
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
-// URLs (like the Image column) become clickable links
 const cellHtml = v => /^https?:\/\//i.test(v) ? `<a href="${esc(v)}" target="_blank" rel="noopener" style="color:var(--acc);font-weight:700">View link</a>` : esc(v);
 const cell = (row, h) => (row[h] === undefined || row[h] === null) ? '' : row[h].toString();
 
-/* Per-row cache (user, task, date parts, searchable text): computed once, then reused by every filter / KPI / chart */
 const metaCache = new WeakMap(), fmtCache = new Map();
 function fmt(t) {
   let v = fmtCache.get(t);
@@ -309,7 +358,6 @@ function meta(row) {
 }
 const searchText = (row, m) => m.s !== null ? m.s : (m.s = headers.map(h => cell(row, h)).join('\u0001').toLowerCase());
 
-/* One pass: KPI counts + chart series */
 function compute(data) {
   const now = new Date(), nowMs = now.getTime(), endMs = new Date(now).setHours(23, 59, 59, 999);
   const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), weekAgo = nowMs - 7 * 864e5;
@@ -359,7 +407,6 @@ let refreshTimer = null, isLoading = false;
 function initData(data) {
   rawData = data;
   if (sheetMode) {
-    // Show every column found in any tab (in sheet order); columns that are empty everywhere are hidden
     const used = new Set(), seen = new Set(); headers = [];
     rawData.forEach(r => { for (const k in r) {
       if (k === 'Sheet') continue;
@@ -371,27 +418,25 @@ function initData(data) {
   dateKeyCache = null;
   taskKey = headers.length > 1 ? headers[1] : headers[0];
   userKey = headers.find(h => /name|user/i.test(h)) || headers[0];
-  // In sheet mode every tab is a user, so the tab name is the user and always shown as a column
   if (sheetMode) { headers.push('Sheet'); userKey = 'Sheet'; }
   buildFilters();
   renderHead();
-  filterAndRender();   // re-applies restored filters / selected users
+  filterAndRender();
 }
 
-// fetch that gives up after the given time (slow mobile networks / Apps Script cold start)
 function fetchT(url, ms = 60000) {
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
   return fetch(url, { signal: ac.signal }).finally(() => clearTimeout(t));
 }
 
-// silent = true: background refresh that keeps filters, sorting and the current page
 function loadData(silent) {
   if (isLoading) return;
   isLoading = true;
   if (!silent) progress(40, 'Fetching data...');
-  // Cache-busting parameter so the newest sheet data is always returned
-  const url = api('after=');
-  return fetchT(url).then(r => r.text()).then(text => {
+  // Use the request that already started at page load (first visit only)
+  const req = (!silent && earlyReq) ? earlyReq : fetchT(api('after=')).then(r => r.text());
+  earlyReq = null;
+  return req.then(text => {
   if (!silent) progress(80, 'Processing...');
   let data;
   try {
@@ -403,14 +448,9 @@ function loadData(silent) {
     if (Array.isArray(j)) data = j;
     else if (j.added && typeof j.added === 'object') { sheetMode = true; lastSig = j.sig; data = flattenSheets(j.added); }
     else if (Array.isArray(j.data)) data = j.data;
-    else {
-      // Object like { "Sheet1": [...], "Sheet2": [...] } -> merge every sheet into one list
-      data = [];
-      sheetMode = true; data = flattenSheets(j);
-    }
+    else { data = []; sheetMode = true; data = flattenSheets(j); }
   } catch (e) { data = Papa.parse(text, { header: true, skipEmptyLines: true }).data; }
 
-  // Even when there are no records yet, keep watching so the first record appears live
   if (lastSig === null) lastSig = '';
 
   if (!data || !data.length) {
@@ -445,16 +485,13 @@ function loadData(silent) {
 
 const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTimeString('en-GB'); saveCache(); };
 
-/* ---------- Live updates ----------
-   Google Sheets cannot push to a website, so the page asks a tiny endpoint (?check=1) every few seconds.
-   The full data is downloaded only when a new row was added to any user tab. */
-const LIVE_CHECK_MS = 3000;   // check for new rows every 3 seconds
-let lastSig = null;   // "tab:lastRow|tab:lastRow" signature of the data the page currently shows
+/* ---------- Live updates ---------- */
+const LIVE_CHECK_MS = 3000;
+let lastSig = null;
 
 const api = q => targetUrl + (targetUrl.includes('?') ? '&' : '?') + q + '&t=' + Date.now();
 const sigMap = s => { const m = {}; (s || '').split('|').forEach(x => { if (!x) return; const i = x.lastIndexOf(':'); m[x.slice(0, i)] = +x.slice(i + 1) || 0; }); return m; };
 
-// { "tab": [rows] } -> one flat list, every row tagged with its tab name
 function flattenSheets(obj) {
   const out = [];
   Object.keys(obj || {}).forEach(sheet => {
@@ -464,7 +501,6 @@ function flattenSheets(obj) {
   return out;
 }
 
-// "checking" stops two checks from running at the same time (slow server = no pile-up)
 let checking = false;
 async function checkForChanges() {
   if (document.hidden || isLoading || checking || lastSig === null) return;
@@ -477,16 +513,32 @@ async function checkForChanges() {
   finally { checking = false; }
 }
 
-// Downloads ONLY the new rows and adds them to the data already on the page
+// Refresh button: always does a full reload from the sheet and shows visible feedback
+async function manualRefresh() {
+  const b = $('refresh-btn'), ico = $('refresh-ico');
+  if (b.dataset.busy) return;
+  b.dataset.busy = '1'; ico.classList.add('animate-spin');
+  statusEl.style.opacity = '1'; statusEl.style.pointerEvents = 'auto';
+  statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Refreshing...`;
+  try {
+    if (isLoading) await new Promise(r => setTimeout(r, 1500));
+    await loadData(true);
+    statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Updated`;
+  } catch (e) {
+    statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Refresh failed`;
+  } finally {
+    delete b.dataset.busy; ico.classList.remove('animate-spin');
+    setTimeout(() => { statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none'; }, 2000);
+  }
+}
+
 async function fetchAdded() {
-  // First rows ever arrived -> one proper initial load (headers, users, tasks)
   if (!rawData.length) { await loadData(false); return; }
   isLoading = true;
   try {
     const j = await (await fetchT(api('after=' + encodeURIComponent(lastSig)))).json();
     if (!j || !j.added) return;
     const before = sigMap(lastSig), now = sigMap(j.sig);
-    // Rows were deleted somewhere: do a full reload so the page matches the sheet
     if (Object.keys(before).some(k => !(k in now) || now[k] < before[k])) { isLoading = false; await loadData(true); return; }
     lastSig = j.sig;
     const rows = flattenSheets(j.added);
@@ -494,7 +546,6 @@ async function fetchAdded() {
   } finally { isLoading = false; }
 }
 
-// Used right after the page starts from saved data: downloads only new rows, retries if it fails
 async function syncSaved(tries = 0) {
   try {
     await fetchAdded();
@@ -538,9 +589,7 @@ function startLiveWatch() {
   window.addEventListener('focus', checkForChanges);
 }
 
-// Applies fresh data without resetting the user's filters, sort order or selected users
 function applyRefresh(data) {
-  // Comparing every row is heavy, so it only runs when the tab is in the background (for the title counter)
   const fresh = document.hidden ? findNewRows(rawData, data) : [];
   const checked = new Set([...document.querySelectorAll('.task-checkbox:checked')].map(c => c.value));
   rawData = data; userTotals = {};
@@ -566,8 +615,6 @@ function applyRefresh(data) {
 let newCount = 0;
 const BASE_TITLE = document.title;
 const sig = r => JSON.stringify(r);
-
-// Rows present in newData that were not in oldData (duplicates are counted, so identical rows still alert)
 function findNewRows(oldData, newData) {
   const seen = {};
   oldData.forEach(r => { const k = sig(r); seen[k] = (seen[k] || 0) + 1; });
@@ -575,8 +622,6 @@ function findNewRows(oldData, newData) {
   newData.forEach(r => { const k = sig(r); if (seen[k]) seen[k]--; else out.push(r); });
   return out;
 }
-
-// New cases only add a counter to the browser tab title while the tab is in the background
 function notifyNew(rows) {
   if (document.hidden) { newCount += rows.length; document.title = `(${newCount}) ${BASE_TITLE}`; }
 }
@@ -605,7 +650,6 @@ function buildFilters() {
     taskMenu.appendChild(l);
   });
   document.querySelectorAll('.task-checkbox').forEach(cb => cb.addEventListener('change', filterAndRender));
-  // Bound only once, so a second initial load never adds duplicate listeners
   if (!listenersBound) {
     listenersBound = true;
     startIn.addEventListener('change', () => { markPreset(''); filterAndRender(); });
@@ -617,11 +661,10 @@ function buildFilters() {
   renderUsers();
 }
 
-/* Sidebar users: click one by one, or select all */
 function renderUsers() {
   const q = $('u-search').value.toLowerCase().trim();
   const list = $('ulist');
-  const keepScroll = list.scrollTop;   // remember the scroll position
+  const keepScroll = list.scrollTop;
   list.innerHTML = '';
   const names = Object.keys(userTotals).sort((a, b) => userTotals[b] - userTotals[a]).filter(n => !q || n.toLowerCase().includes(q));
   $('u-total').innerText = `(${Object.keys(userTotals).length})`;
@@ -636,12 +679,12 @@ function renderUsers() {
       <span class="st tick">✓</span>`;
     el.addEventListener('click', () => {
       selectedUsers.has(n) ? selectedUsers.delete(n) : selectedUsers.add(n);
-      el.classList.toggle('sel');   // instant highlight, no list rebuild
-      scheduleFilter();             // several quick clicks are merged into one update
+      el.classList.toggle('sel');
+      scheduleFilter();
     });
     list.appendChild(el);
   });
-  list.scrollTop = keepScroll;      // restore the scroll position
+  list.scrollTop = keepScroll;
 }
 const scheduleFilter = debounce(filterAndRender, 60);
 function selectAllUsers() { Object.keys(userTotals).forEach(u => selectedUsers.add(u)); renderUsers(); filterAndRender(); }
@@ -703,7 +746,6 @@ function updateAll() {
     });
   }
   renderScope();
-  // Only the page that is visible gets drawn; the other one is drawn when you switch to it
   if (!$('page-main').classList.contains('hidden')) renderTable();
   if (!$('page-dashboard').classList.contains('hidden')) renderDash(); else dashDirty = true;
   if (curUser && !upanel.contains(document.activeElement)) renderUserPanel();
@@ -713,12 +755,9 @@ function renderDash() {
   const c = compute(filteredData);
   renderKpisAndBoard(c);
   renderCharts(filteredData, c);
-  renderInactive();   // users with no cases today
+  renderInactive();
 }
 
-/* Users who have not recorded any case today.
-   Uses ALL data (not the date filter), so "today" is always the real today.
-   Respects the sidebar user selection. */
 function renderInactive() {
   const day = new Date().setHours(0, 0, 0, 0);
   const activeToday = new Set(), lastSeen = {};
@@ -763,7 +802,7 @@ function renderHead() {
   }).join('')}</tr>`;
 }
 
-const PAGE_ROWS = isMobile() ? 100 : 300;   // rows drawn at once; the rest load with the buttons under the table
+const PAGE_ROWS = isMobile() ? 100 : 300;
 let tableLimit = PAGE_ROWS;
 function renderTable() {
   const wrap = $('table-wrap');
@@ -772,7 +811,6 @@ function renderTable() {
   if (!filteredData.length) {
     tb.innerHTML = `<tr><td colspan="${cols}" class="text-center opacity-50 !py-8">No records match the current filters.</td></tr>`;
   } else {
-    // One string + one innerHTML: far lighter on phones than creating thousands of elements
     const rows = [];
     const n = Math.min(filteredData.length, tableLimit);
     for (let i = 0; i < n; i++) {
@@ -800,7 +838,6 @@ function renderKpisAndBoard(c) {
     perUser[raw] = (perUser[raw] || 0) + 1;
   });
 
-  // Leaderboard (general data only, no targets)
   const lb = $('leaderboard-container'); lb.innerHTML = '';
   const names = Object.keys(perUser).sort((a, b) => perUser[b] - perUser[a]);
   if (!names.length) lb.innerHTML = '<div class="sub text-center py-4 md:col-span-2">No users match the current filters.</div>';
@@ -816,7 +853,6 @@ function renderKpisAndBoard(c) {
     lb.appendChild(d);
   });
 
-  // Today's activity, one row per user, with daily target
   const tu = {};
   filteredData.forEach((row, i) => {
     if (!c.todayRows.has(i)) return;
@@ -844,15 +880,14 @@ function renderKpisAndBoard(c) {
 
 let lastDark = null;
 function renderCharts(data, c) {
-  if (!headers.length) return;
+  if (!headers.length || typeof Chart === 'undefined') return;   // Chart.js not loaded yet: chartLoaded() will redraw
   c = c || compute(data);
   const dark = document.documentElement.classList.contains('dark');
   const tc = dark ? '#8b98b0' : '#64748b', gc = dark ? '#1b2437' : '#e5e9f1';
-  if (lastDark !== dark) { Object.values(charts).forEach(ch => ch.destroy()); charts = {}; lastDark = dark; } // theme changed: rebuild
+  if (lastDark !== dark) { Object.values(charts).forEach(ch => ch.destroy()); charts = {}; lastDark = dark; }
   const now = new Date();
   const opts = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
     scales: { y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, precision: 0 } }, x: { grid: { display: false }, ticks: { color: tc } } } };
-  // Existing charts are updated in place (no destroy / re-create, no animation) = much faster
   const make = (id, type, labels, values, color) => {
     const ch = charts[id];
     if (ch) { ch.data.labels = labels; ch.data.datasets[0].data = values; ch.update('none'); return; }
@@ -868,7 +903,7 @@ function renderCharts(data, c) {
   make('taskChart', 'bar', Object.keys(tc2).length ? Object.keys(tc2) : ['No tasks'], Object.keys(tc2).length ? Object.values(tc2) : [0], '#0d9488');
 }
 
-/* ---------- Daily targets (saved on this device, stay until you change them) ---------- */
+/* ---------- Daily targets ---------- */
 let targets = {}, defaultTarget = 30;
 function loadTargets() {
   try { const t = JSON.parse(localStorage.getItem('qa-targets') || 'null'); if (t) { targets = t.users || {}; if (t.def != null) defaultTarget = +t.def || 0; } } catch (e) {}
@@ -883,7 +918,7 @@ function setTarget(u, v) { targets[u] = cleanNum(v); saveTargets(); refreshTarge
 function setAllTargets() { defaultTarget = cleanNum($('all-target').value); targets = {}; saveTargets(); refreshTargetViews(); }
 function toggleTheme() { document.documentElement.classList.toggle('dark'); renderCharts(filteredData); if (curUser) renderUserPanel(); }
 
-/* ---------- User page (side panel): no targets, no streaks, choose a period ---------- */
+/* ---------- User page (side panel) ---------- */
 let curUser = null, uRange = '30', uFrom = '', uTo = '', uChart = null;
 const upanel = $('upanel'), ubk = $('ubk');
 function openUser(u) { curUser = u; uRange = '30'; renderUserPanel(); ubk.classList.remove('hidden'); upanel.style.transform = 'none'; }
@@ -952,33 +987,37 @@ function renderUserPanel() {
   upanel.scrollTop = keep;
 
   if (uChart) { uChart.destroy(); uChart = null; }
+  if (typeof Chart === 'undefined') return;
   const dark = document.documentElement.classList.contains('dark'), tc = dark ? '#8b98b0' : '#64748b', gc = dark ? '#1b2437' : '#e5e9f1';
   uChart = new Chart($('uChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ data: values, backgroundColor: '#0d9488cc', borderRadius: 5 }] },
     options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, precision: 0 } }, x: { grid: { display: false }, ticks: { color: tc, maxRotation: 0, autoSkip: true } } } } });
 }
 
-/* ---------- Export (exports the current filtered selection) ---------- */
+/* ---------- Export ---------- */
 function exportCSV() {
   if (!filteredData.length) return alert('No data to export!');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([Papa.unparse(filteredData)], { type: 'text/csv;charset=utf-8;' }));
   a.download = 'AppSheet_QA_Export.csv'; a.click();
 }
-function exportExcel() {
+async function exportExcel() {
   if (!filteredData.length) return alert('No data to export!');
+  if (typeof XLSX === 'undefined') {   // the Excel library is loaded only now, on demand
+    try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'); }
+    catch (e) { return alert('Could not load the Excel library'); }
+  }
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredData), 'QA Data');
   XLSX.writeFile(wb, 'AppSheet_QA_Export.xlsx');
 }
 
 /* ---------- Start ---------- */
-/* Mobile browsers often discard a background tab and reload it.
-   The last data and your filters are kept on the device, so the page comes back instantly. */
 const idb = () => new Promise((res, rej) => { const r = indexedDB.open('qa-dash', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 const cacheGet = async () => { try { const db = await idb(); return await new Promise(res => { const q = db.transaction('kv').objectStore('kv').get('data'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); } catch (e) { return null; } };
 const saveCache = debounce(async () => {
   if (!rawData.length) return;
+  try { localStorage.setItem('qa-has-cache', '1'); } catch (e) {}
   try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').put({ sheetMode, sig: lastSig, data: rawData }, 'data'); } catch (e) {}
 }, 300);
 
@@ -999,11 +1038,10 @@ async function start() {
   const c = await cacheGet();
   if (c && c.data && c.data.length) {
     sheetMode = c.sheetMode; lastSig = c.sig;
-    initData(c.data);                      // data is shown immediately
+    initData(c.data);
     progress(100, 'Saved data, updating...');
     statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Showing saved data, updating...`;
     startLiveWatch();
-    // background update: only the NEW rows are downloaded when the saved signature exists
     if (lastSig) syncSaved();
     else Promise.resolve(loadData(true)).finally(() => {
       statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none';
@@ -1013,8 +1051,8 @@ async function start() {
     startLiveWatch();
   }
 }
-// the deferred scripts (Chart, Papa, XLSX) are ready before DOMContentLoaded fires
-document.addEventListener('DOMContentLoaded', start);
+// This script sits at the end of <body>, so the DOM is already ready: start immediately
+start();
 </script>
 </body>
 </html>
