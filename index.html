@@ -12,97 +12,154 @@
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onload="chartLoaded()"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f3f5f9;--card:#fff;--line:#e5e9f1;--ink:#0f1629;--mute:#64748b;--acc:#0d9488;--acc2:#4f46e5;--side:#0b1120}
-.dark{--bg:#070b14;--card:#0f1626;--line:#1b2437;--ink:#e8edf6;--mute:#8b98b0}
+/* ================= TOKENS ================= */
+:root{
+  --bg:#eef2f8;--ink:#0f1629;--mute:#64748b;
+  --acc:#0d9488;--acc2:#4f46e5;--grad:linear-gradient(135deg,#0d9488,#4f46e5);
+  --line:rgba(15,22,41,.08);
+  --glass:rgba(255,255,255,.62);--glass-strong:rgba(255,255,255,.86);--glass-line:rgba(255,255,255,.8);
+  --glass-shadow:0 1px 2px rgba(15,22,41,.04),0 12px 32px -14px rgba(31,38,135,.22);
+  --blur:blur(18px) saturate(170%);
+  --card:var(--glass);
+}
+.dark{
+  --bg:#060a13;--ink:#e8edf6;--mute:#8b98b0;
+  --line:rgba(255,255,255,.07);
+  --glass:rgba(17,25,42,.55);--glass-strong:rgba(14,21,36,.9);--glass-line:rgba(255,255,255,.08);
+  --glass-shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px -14px rgba(0,0,0,.7);
+}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink)}
-::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#94a3b855;border-radius:9px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 1px 2px rgba(15,22,41,.04),0 8px 24px -12px rgba(15,22,41,.10)}
-.ctl{background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:12px;font-weight:600;color:var(--ink);padding:9px 12px;outline:none;transition:.15s}
-.ctl:focus{border-color:var(--acc);box-shadow:0 0 0 3px #0d948822}
-.btn{background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:12px;font-weight:700;padding:9px 14px;transition:.15s;color:var(--ink)}
-.btn:hover{border-color:var(--acc);color:var(--acc)}
-.btn-pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn-pri:hover{background:#0f766e;color:#fff}
-.seg{display:flex;gap:2px;padding:3px;background:var(--card);border:1px solid var(--line);border-radius:12px}
-.seg button{padding:6px 12px;border-radius:9px;font-size:12px;font-weight:700;color:var(--mute);transition:.15s}
-.seg button.on{background:var(--acc);color:#fff}
-.h-sec{font-size:13px;font-weight:800;letter-spacing:-.01em}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:linear-gradient(#0d9488,#4f46e5);border-radius:9px}
+
+/* animated background orbs */
+body::before,body::after{content:"";position:fixed;z-index:-1;width:55vmax;height:55vmax;border-radius:50%;filter:blur(100px);opacity:.5;pointer-events:none;animation:float 24s ease-in-out infinite alternate}
+body::before{top:-22vmax;left:-14vmax;background:radial-gradient(circle,#0d9488 0%,transparent 65%)}
+body::after{bottom:-26vmax;right:-14vmax;background:radial-gradient(circle,#4f46e5 0%,transparent 65%);animation-delay:-9s}
+.dark body::before,.dark body::after{opacity:.28}
+@keyframes float{0%{transform:translate(0,0) scale(1)}100%{transform:translate(6vmax,5vmax) scale(1.15)}}
+
+/* ================= CARDS ================= */
+.card{
+  background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--glass-line);border-radius:24px;
+  box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.6);
+  transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;
+}
+.dark .card{box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.05)}
+.card-hover:hover{transform:translateY(-3px);box-shadow:0 20px 44px -16px rgba(13,148,136,.38),inset 0 1px 0 rgba(255,255,255,.6)}
+.h-sec{font-size:14px;font-weight:800;letter-spacing:-.01em}
 .sub{font-size:11px;color:var(--mute);font-weight:500}
-#sidebar{width:290px;min-width:290px;background:var(--side);color:#cbd5e1;transition:width .3s,min-width .3s}
-#sidebar.collapsed{width:76px;min-width:76px}
+.card-head{padding:18px 22px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}
+.card-head .ttl{display:flex;align-items:center;gap:10px}
+.card-head .dot{width:8px;height:26px;border-radius:99px;background:var(--grad)}
+
+/* ================= CONTROLS ================= */
+.ctl{background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--glass-line);border-radius:14px;font-size:12px;font-weight:600;color:var(--ink);padding:9px 13px;outline:none;transition:.15s}
+.ctl:focus{border-color:var(--acc);box-shadow:0 0 0 4px #0d948822}
+.ctl::placeholder{color:var(--mute);font-weight:500}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--glass-line);border-radius:14px;font-size:12px;font-weight:700;padding:9px 14px;transition:.15s;color:var(--ink)}
+.btn:hover{border-color:var(--acc);color:var(--acc);transform:translateY(-1px);box-shadow:0 8px 18px -8px #0d948877}
+.btn-pri{background:var(--grad);border-color:transparent;color:#fff}
+.btn-pri:hover{color:#fff;filter:brightness(1.08)}
+.seg{display:flex;gap:2px;padding:3px;background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--glass-line);border-radius:14px}
+.seg button{padding:6px 13px;border-radius:11px;font-size:12px;font-weight:700;color:var(--mute);transition:.15s}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:var(--grad);color:#fff;box-shadow:0 6px 14px -6px #0d9488cc}
+
+/* ================= HEADER ================= */
+header{background:var(--glass)!important;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-bottom:1px solid var(--glass-line)!important}
+.tools{display:flex;align-items:center;gap:8px;padding:6px;border-radius:18px;background:rgba(127,140,160,.08);border:1px solid var(--line)}
+.tools .ctl,.tools .btn,.tools .seg{box-shadow:none}
+.srch{position:relative}
+.srch svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--mute);pointer-events:none}
+.srch input{padding-left:32px}
+
+/* ================= SIDEBAR ================= */
+#sidebar{width:290px;min-width:290px;color:#cbd5e1;transition:width .3s,min-width .3s;
+  background:linear-gradient(180deg,rgba(9,14,28,.9),rgba(9,14,28,.78));
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border-right:1px solid rgba(255,255,255,.07)}
+#sidebar.collapsed{width:78px;min-width:78px}
 #sidebar.collapsed .st{display:none!important}
 #sidebar.collapsed .navb,#sidebar.collapsed .uitem{justify-content:center;padding-left:0;padding-right:0}
-.navb{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border-radius:12px;font-size:13px;font-weight:700;color:#94a3b8;transition:.15s}
-.navb:hover{background:#ffffff0d;color:#fff}
-.navb.on{background:linear-gradient(135deg,#0d9488,#4f46e5);color:#fff;box-shadow:0 8px 20px -8px #0d9488aa}
-.uitem{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:12px;cursor:pointer;transition:.15s;border:1px solid transparent}
-.uitem:hover{background:#ffffff0a}
-.uitem.sel{background:#0d948822;border-color:#0d948855}
-.uitem input{display:none}
-.av{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
-.tick{width:16px;height:16px;border-radius:5px;border:1.5px solid #475569;display:grid;place-items:center;flex-shrink:0;font-size:10px;color:transparent}
+.logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;background:var(--grad);box-shadow:0 10px 24px -8px #0d9488cc,inset 0 1px 0 rgba(255,255,255,.35)}
+.side-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b}
+.navb{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border-radius:14px;font-size:13px;font-weight:700;color:#94a3b8;transition:.15s}
+.navb:hover{background:rgba(255,255,255,.06);color:#fff}
+.navb.on{background:linear-gradient(135deg,rgba(13,148,136,.95),rgba(79,70,229,.95));color:#fff;box-shadow:0 12px 26px -10px #0d9488dd,inset 0 1px 0 rgba(255,255,255,.25)}
+.uitem{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:14px;cursor:pointer;transition:.15s;border:1px solid transparent}
+.uitem:hover{background:rgba(255,255,255,.05)}
+.uitem.sel{background:rgba(13,148,136,.14);border-color:rgba(45,212,191,.35)}
+.av{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.tick{width:17px;height:17px;border-radius:6px;border:1.5px solid #475569;display:grid;place-items:center;flex-shrink:0;font-size:10px;color:transparent;transition:.15s}
 .uitem.sel .tick{background:var(--acc);border-color:var(--acc);color:#fff}
-.mini{font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;background:#ffffff0f;color:#cbd5e1}.mini:hover{background:#ffffff1f;color:#fff}
+.cnt{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.07);color:#94a3b8}
+.uitem.sel .cnt{background:rgba(45,212,191,.2);color:#5eead4}
+.mini{font-size:11px;font-weight:700;padding:5px 10px;border-radius:9px;background:rgba(255,255,255,.07);color:#cbd5e1;transition:.15s}
+.mini:hover{background:rgba(255,255,255,.16);color:#fff}
 #ulist{overflow-y:auto;flex:1;min-height:0}
-.kpi{padding:18px 20px;position:relative;overflow:hidden}
-.kpi:before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:0 4px 4px 0;background:var(--k)}
-.kpi b{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.1;display:block;margin-top:8px}
-table th{padding:12px 14px;font-weight:700;color:var(--mute);font-size:11px;white-space:nowrap}
-table td{padding:11px 14px;white-space:nowrap}
-tbody tr{border-top:1px solid var(--line)}tbody tr:hover{background:#0d94880a}
-.chip{display:inline-flex;align-items:center;gap:6px;background:#0d948818;color:var(--acc);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700}
-.chip-red{background:#f43f5e18;color:#e11d48}
-#sbk{display:none}
-@media (max-width:768px){
- #sidebar{position:fixed;top:0;left:0;bottom:0;width:280px!important;min-width:280px!important;transform:translateX(-100%);transition:transform .3s;z-index:40}
- #sidebar.mobile-open{transform:none}
- #sidebar.collapsed .st{display:revert!important}
- #sbk.open{display:block;position:fixed;inset:0;background:#0008;z-index:30}
- header{flex-direction:column;align-items:stretch!important;height:auto!important;padding:10px 12px!important}
- .frow{flex-wrap:nowrap!important;overflow-x:auto;padding-bottom:4px}.frow>*{flex-shrink:0}
- #kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-}
-.pb{height:6px;border-radius:99px;overflow:hidden;background:var(--line)}
-.pb>i{display:block;height:100%;border-radius:99px;transition:width .4s}
-@media print{#sidebar,header,#status-el,#upanel,#ubk{display:none!important}body{overflow:visible;height:auto}}
+.side-foot{padding:11px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07)}
+#u-search{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);transition:.15s}
+#u-search:focus{border-color:#2dd4bf88;background:rgba(255,255,255,.09)}
 
-/* ================= SOFT GLASS THEME ================= */
-:root{--glass:rgba(255,255,255,.58);--glass-strong:rgba(255,255,255,.82);--glass-line:rgba(255,255,255,.75);--glass-shadow:0 8px 32px -8px rgba(31,38,135,.18);--blur:blur(18px) saturate(170%)}
-.dark{--glass:rgba(15,22,38,.55);--glass-strong:rgba(15,22,38,.88);--glass-line:rgba(255,255,255,.09);--glass-shadow:0 8px 32px -8px rgba(0,0,0,.6)}
-body{background:var(--bg)}
-body::before,body::after{content:"";position:fixed;z-index:-1;width:60vmax;height:60vmax;border-radius:50%;filter:blur(90px);opacity:.55;pointer-events:none;animation:float 22s ease-in-out infinite alternate}
-body::before{top:-20vmax;left:-15vmax;background:radial-gradient(circle,#0d9488 0%,transparent 65%)}
-body::after{bottom:-25vmax;right:-15vmax;background:radial-gradient(circle,#4f46e5 0%,transparent 65%);animation-delay:-8s}
-.dark body::before,.dark body::after{opacity:.35}
-@keyframes float{0%{transform:translate(0,0) scale(1)}100%{transform:translate(6vmax,5vmax) scale(1.15)}}
-.card{background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--glass-line);border-radius:22px;box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.55);transition:transform .25s ease,box-shadow .25s ease}
-.dark .card{box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.06)}
-.kpi:hover,#page-dashboard .grid>.card:hover{transform:translateY(-3px);box-shadow:0 16px 40px -12px rgba(13,148,136,.35),inset 0 1px 0 rgba(255,255,255,.6)}
-.kpi:before{width:5px;box-shadow:0 0 16px var(--k)}
-.kpi b{background:linear-gradient(135deg,var(--ink),var(--k));-webkit-background-clip:text;background-clip:text;color:transparent}
-header{background:var(--glass)!important;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-color:var(--glass-line)!important}
-#sidebar{background:linear-gradient(180deg,rgba(11,17,32,.82),rgba(11,17,32,.7));-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-right:1px solid rgba(255,255,255,.08)}
-.navb.on{box-shadow:0 10px 28px -8px #0d9488cc}
-.ctl,.btn,.seg{background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-color:var(--glass-line)}
-.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px -6px #0d948866}
-.btn-pri{background:linear-gradient(135deg,#0d9488,#4f46e5);border-color:transparent}
-.btn-pri:hover{background:linear-gradient(135deg,#0f766e,#4338ca);color:#fff}
-.seg button.on{background:linear-gradient(135deg,#0d9488,#4f46e5);box-shadow:0 4px 12px -4px #0d9488aa}
-.pb{height:8px}
-#table-wrap,#page-main .card,#page-dashboard .overflow-x-auto{-webkit-backdrop-filter:none;backdrop-filter:none}
-#page-main .card{background:var(--glass-strong)}
-#table-head{background:var(--glass-strong)!important}
+/* ================= KPI ================= */
+.kpi{padding:18px 20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden}
+.kpi::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,var(--k),transparent 70%);opacity:.16;pointer-events:none}
+.kpi-ic{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;flex-shrink:0;color:var(--k);background:color-mix(in srgb,var(--k) 15%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--k) 30%,transparent)}
+.kpi-ic svg{width:22px;height:22px}
+.kpi .sub{text-transform:uppercase;letter-spacing:.07em;font-size:10px;font-weight:700}
+.kpi b{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.1;display:block;margin-top:5px;background:linear-gradient(135deg,var(--ink) 30%,var(--k));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ================= LEADERBOARD / LISTS ================= */
+.lb-row{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:18px;border:1px solid var(--line);background:rgba(127,140,160,.05);transition:.2s}
+.lb-row:hover{background:rgba(13,148,136,.08);border-color:rgba(13,148,136,.3);transform:translateX(2px)}
+.lb-row.top{background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(13,148,136,.06));border-color:rgba(245,158,11,.28)}
+.rank{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:12px;font-weight:800;flex-shrink:0;color:#fff}
+.bar{height:7px;border-radius:99px;overflow:hidden;background:var(--line)}
+.bar>i{display:block;height:100%;border-radius:99px;background:var(--grad);transition:width .5s}
+.pb{height:8px;border-radius:99px;overflow:hidden;background:var(--line)}
+.pb>i{display:block;height:100%;border-radius:99px;transition:width .4s}
+.chip{display:inline-flex;align-items:center;gap:6px;background:rgba(13,148,136,.12);color:var(--acc);border-radius:99px;padding:3px 11px;font-size:11px;font-weight:700;box-shadow:inset 0 0 0 1px rgba(13,148,136,.25)}
+.chip-red{background:rgba(244,63,94,.1);color:#e11d48;box-shadow:inset 0 0 0 1px rgba(244,63,94,.25)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 0 0 #10b98188;animation:pulse 1.8s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 8px #10b98100}100%{box-shadow:0 0 0 0 #10b98100}}
+.idle-row{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:18px;border:1px solid var(--line);cursor:pointer;background:rgba(127,140,160,.05);transition:.2s}
+.idle-row:hover{border-color:rgba(244,63,94,.4);background:rgba(244,63,94,.05)}
+
+/* ================= TABLES ================= */
+.tbl-card{background:var(--glass-strong)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+table{border-collapse:separate;border-spacing:0}
+table th{padding:13px 15px;font-weight:800;color:var(--mute);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border-bottom:1px solid var(--line)}
+table td{padding:12px 15px;white-space:nowrap;border-bottom:1px solid var(--line)}
 tbody tr{transition:background .15s}
-tbody tr:hover{background:rgba(13,148,136,.08)}
-#upanel{background:var(--glass-strong)!important;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:-20px 0 60px -20px rgba(0,0,0,.35)}
-.chip{box-shadow:inset 0 0 0 1px rgba(13,148,136,.25)}
-#status-el{border-radius:99px}
-::-webkit-scrollbar-thumb{background:linear-gradient(#0d9488,#4f46e5);border-radius:9px}
+tbody tr:nth-child(even){background:rgba(127,140,160,.045)}
+tbody tr:hover{background:rgba(13,148,136,.1)}
+#table-head,#today-table-head{background:var(--glass-strong)!important}
+#today-table-head th{cursor:pointer}
+#today-table-head th:hover{color:var(--acc)}
+
+/* ================= USER PANEL ================= */
+#upanel{background:var(--glass-strong)!important;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:-24px 0 60px -20px rgba(0,0,0,.4);border-left:1px solid var(--glass-line)!important}
+#status-el{border-radius:99px;padding:8px 16px}
+#sbk{display:none}
+
+/* ================= RESPONSIVE ================= */
 @media (max-width:768px){
- .card,header,.ctl,.btn,.seg{-webkit-backdrop-filter:none;backdrop-filter:none}
- .card{background:var(--glass-strong)}
- body::before,body::after{animation:none;filter:blur(60px)}
+  #sidebar{position:fixed;top:0;left:0;bottom:0;width:280px!important;min-width:280px!important;transform:translateX(-100%);transition:transform .3s;z-index:40}
+  #sidebar.mobile-open{transform:none}
+  #sidebar.collapsed .st{display:revert!important}
+  #sbk.open{display:block;position:fixed;inset:0;background:#0008;z-index:30}
+  header{flex-direction:column;align-items:stretch!important;height:auto!important;padding:10px 12px!important}
+  .frow{flex-wrap:nowrap!important;overflow-x:auto;padding-bottom:4px}.frow>*{flex-shrink:0}
+  .tools{flex-wrap:nowrap}
+  #kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .kpi{padding:14px;gap:12px}.kpi-ic{width:40px;height:40px;border-radius:13px}.kpi b{font-size:24px}
+  .card,header,.ctl,.btn,.seg,#sidebar{-webkit-backdrop-filter:none;backdrop-filter:none}
+  .card{background:var(--glass-strong)}
+  body::before,body::after{animation:none;filter:blur(60px)}
 }
-@media (prefers-reduced-motion:reduce){body::before,body::after{animation:none}.card,.btn{transition:none}}
+@media (prefers-reduced-motion:reduce){body::before,body::after{animation:none}.card,.btn,.lb-row{transition:none}}
+@media print{#sidebar,header,#status-el,#upanel,#ubk{display:none!important}body{overflow:visible;height:auto}}
 </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col antialiased">
@@ -114,11 +171,12 @@ tbody tr:hover{background:rgba(13,148,136,.08)}
 <!-- SIDEBAR -->
 <aside id="sidebar" class="flex flex-col p-4 gap-5 h-full z-20">
   <div class="flex items-center gap-3 px-1">
-    <div class="w-10 h-10 rounded-xl grid place-items-center text-white font-extrabold flex-shrink-0" style="background:linear-gradient(135deg,#0d9488,#4f46e5)">QA</div>
+    <div class="logo flex-shrink-0">QA</div>
     <div class="st"><div class="text-sm font-extrabold text-white">AppSheet QA</div><div class="text-[11px] text-slate-400">Quality control hub</div></div>
   </div>
 
   <nav class="space-y-1.5">
+    <div class="st side-label px-2 pb-1">Menu</div>
     <button class="navb on" id="nav-dashboard" onclick="switchPage('dashboard')">
       <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
       <span class="st">Overview</span></button>
@@ -129,46 +187,49 @@ tbody tr:hover{background:rgba(13,148,136,.08)}
 
   <div class="flex flex-col flex-1 min-h-0 gap-2.5">
     <div class="st flex items-center justify-between px-1">
-      <span class="text-[11px] font-bold text-slate-400">Team members <span id="u-total" class="text-slate-500"></span></span>
-      <span class="flex gap-1.5"><button class="mini" onclick="selectAllUsers()">Select all</button><button class="mini" onclick="clearUsers()">Clear</button></span>
+      <span class="side-label">Team <span id="u-total" class="text-slate-500"></span></span>
+      <span class="flex gap-1.5"><button class="mini" onclick="selectAllUsers()">All</button><button class="mini" onclick="clearUsers()">Clear</button></span>
     </div>
-    <input id="u-search" class="st w-full text-xs font-semibold text-white placeholder-slate-500 px-3 py-2 rounded-xl outline-none" style="background:#ffffff0d;border:1px solid #ffffff12" placeholder="Find a user...">
+    <input id="u-search" class="st w-full text-xs font-semibold text-white placeholder-slate-500 px-3 py-2.5 rounded-xl outline-none" placeholder="Find a user...">
     <div id="ulist" class="space-y-1"></div>
   </div>
 
-  <div class="st flex items-center justify-between text-[11px] font-bold text-slate-400 px-2 pt-3 border-t" style="border-color:#ffffff12">
-    <span id="ptext">Starting...</span><span id="ppct" style="color:#2dd4bf">0%</span>
+  <div class="st side-foot flex items-center justify-between text-[11px] font-bold text-slate-400">
+    <span class="flex items-center gap-2"><i class="live-dot"></i><span id="ptext">Starting...</span></span><span id="ppct" style="color:#2dd4bf">0%</span>
   </div>
 </aside>
 
 <!-- MAIN -->
 <main class="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-<header class="min-h-[76px] px-6 py-3 flex items-center justify-between gap-4 z-10 border-b" style="background:var(--card);border-color:var(--line)">
+<header class="min-h-[76px] px-6 py-3 flex items-center justify-between gap-4 z-10 border-b">
   <div class="frow flex items-center gap-2.5 flex-wrap">
     <button class="btn !px-3" onclick="toggleSidebar()" title="Toggle sidebar"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-    <div class="seg" id="presets">
-      <button data-p="all" class="on" onclick="setPreset('all')">All</button>
-      <button data-p="weekly" onclick="setPreset('weekly')">Weekly</button>
-      <button data-p="monthly" onclick="setPreset('monthly')">Monthly</button>
-      <button data-p="yearly" onclick="setPreset('yearly')">Yearly</button>
+    <div class="tools frow">
+      <div class="seg" id="presets">
+        <button data-p="all" class="on" onclick="setPreset('all')">All</button>
+        <button data-p="weekly" onclick="setPreset('weekly')">Weekly</button>
+        <button data-p="monthly" onclick="setPreset('monthly')">Monthly</button>
+        <button data-p="yearly" onclick="setPreset('yearly')">Yearly</button>
+      </div>
+      <div class="srch"><svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M21 21l-4.3-4.3"/></svg>
+        <input id="search-input" class="ctl w-44" placeholder="Search records..."></div>
+      <div class="relative">
+        <button id="task-btn" class="ctl flex items-center gap-2"><span id="task-label">Tasks</span><span class="text-[9px] opacity-50">▼</span></button>
+        <div id="task-menu" class="hidden absolute left-0 mt-2 w-64 card p-2 z-50 max-h-60 overflow-y-auto" style="background:var(--glass-strong)"></div>
+      </div>
+      <div class="ctl flex items-center gap-1.5 !py-1.5">
+        <input type="date" id="start-date-input" class="bg-transparent outline-none" title="Start date">
+        <span class="opacity-40">–</span>
+        <input type="date" id="end-date-input" class="bg-transparent outline-none" title="End date">
+      </div>
+      <button id="reset-btn" class="btn">Reset</button>
     </div>
-    <input id="search-input" class="ctl w-44" placeholder="Search records...">
-    <div class="relative">
-      <button id="task-btn" class="ctl flex items-center gap-2"><span id="task-label">Tasks</span><span class="text-[9px] opacity-50">▼</span></button>
-      <div id="task-menu" class="hidden absolute left-0 mt-2 w-64 card p-2 z-50 max-h-60 overflow-y-auto"></div>
-    </div>
-    <div class="ctl flex items-center gap-1.5 !py-1.5">
-      <input type="date" id="start-date-input" class="bg-transparent outline-none" title="Start date">
-      <span class="opacity-40">–</span>
-      <input type="date" id="end-date-input" class="bg-transparent outline-none" title="End date">
-    </div>
-    <button id="reset-btn" class="btn">Reset</button>
   </div>
   <div class="flex items-center gap-2 flex-shrink-0 frow">
     <button class="btn" id="refresh-btn" onclick="manualRefresh()" title="Refresh now"><span id="refresh-ico" class="inline-block">⟳</span></button>
     <button class="btn" onclick="toggleTheme()" title="Toggle theme">◐</button>
     <button class="btn" onclick="exportCSV()">CSV</button>
-    <button class="btn" onclick="exportExcel()">Excel</button>
+    <button class="btn btn-pri" onclick="exportExcel()">Excel</button>
   </div>
 </header>
 
@@ -176,23 +237,23 @@ tbody tr:hover{background:rgba(13,148,136,.08)}
 
 <div id="page-dashboard" class="space-y-6">
   <div class="flex flex-wrap items-end justify-between gap-3">
-    <div><h2 class="text-xl font-extrabold tracking-tight">Performance overview</h2>
+    <div><h2 class="text-2xl font-extrabold tracking-tight">Performance overview</h2>
     <div class="sub mt-1" id="scope-line">Showing all users</div></div>
     <div id="scope-chips" class="flex flex-wrap gap-1.5"></div>
   </div>
 
   <div id="kpis" class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-    <div class="card kpi" style="--k:#64748b"><span class="sub">Total rows</span><b id="stat-total">0</b></div>
-    <div class="card kpi" style="--k:#10b981"><span class="sub">Today</span><b id="stat-daily">0</b></div>
-    <div class="card kpi" style="--k:#8b5cf6"><span class="sub">Last 7 days</span><b id="stat-weekly">0</b></div>
-    <div class="card kpi" style="--k:#4f46e5"><span class="sub">This month</span><b id="stat-monthly">0</b></div>
-    <div class="card kpi" style="--k:#f59e0b"><span class="sub">This year</span><b id="stat-yearly">0</b></div>
+    <div class="card card-hover kpi" style="--k:#64748b"><div class="kpi-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><span class="sub">Total rows</span><b id="stat-total">0</b></div></div>
+    <div class="card card-hover kpi" style="--k:#10b981"><div class="kpi-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></div><div><span class="sub">Today</span><b id="stat-daily">0</b></div></div>
+    <div class="card card-hover kpi" style="--k:#8b5cf6"><div class="kpi-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></div><div><span class="sub">Last 7 days</span><b id="stat-weekly">0</b></div></div>
+    <div class="card card-hover kpi" style="--k:#4f46e5"><div class="kpi-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path stroke-linecap="round" d="M8 3v4m8-4v4M3 10h18"/></svg></div><div><span class="sub">This month</span><b id="stat-monthly">0</b></div></div>
+    <div class="card card-hover kpi" style="--k:#f59e0b"><div class="kpi-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM7 6H4v1a3 3 0 003 3M17 6h3v1a3 3 0 01-3 3"/></svg></div><div><span class="sub">This year</span><b id="stat-yearly">0</b></div></div>
   </div>
 
   <div class="card overflow-hidden">
-    <div class="p-5 flex flex-wrap items-center justify-between gap-3 border-b" style="border-color:var(--line)">
-      <div><div class="h-sec">Leaderboard</div><div class="sub">Cases per user</div></div>
-      <span class="chip">Live</span>
+    <div class="card-head">
+      <div class="ttl"><i class="dot"></i><div><div class="h-sec">Leaderboard</div><div class="sub">Cases per user</div></div></div>
+      <span class="chip"><i class="live-dot"></i>Live</span>
     </div>
     <div id="leaderboard-container" class="p-5 grid gap-2.5 md:grid-cols-2"></div>
   </div>
@@ -205,31 +266,31 @@ tbody tr:hover{background:rgba(13,148,136,.08)}
   </div>
 
   <div class="card overflow-hidden">
-    <div class="p-5 flex items-center justify-between border-b" style="border-color:var(--line)">
-      <div><div class="h-sec">Not active today</div><div class="sub">Users with no cases recorded today</div></div>
+    <div class="card-head">
+      <div class="ttl"><i class="dot" style="background:linear-gradient(#f43f5e,#f59e0b)"></i><div><div class="h-sec">Not active today</div><div class="sub">Users with no cases recorded today</div></div></div>
       <span id="inactive-badge" class="chip chip-red">0 users</span>
     </div>
     <div id="inactive-list" class="p-5 grid gap-2.5 md:grid-cols-2 lg:grid-cols-3"></div>
   </div>
 
-  <div class="card overflow-hidden">
-    <div class="p-5 flex flex-wrap items-center justify-between gap-3 border-b" style="border-color:var(--line)">
-      <div class="flex items-center gap-3"><div class="h-sec">Today's activity</div><span id="today-count-badge" class="chip">0 cases today</span></div>
+  <div class="card overflow-hidden tbl-card">
+    <div class="card-head">
+      <div class="ttl"><i class="dot"></i><div class="h-sec">Today's activity</div><span id="today-count-badge" class="chip">0 cases today</span></div>
       <div class="flex items-center gap-2"><span class="sub">Daily target</span>
         <input id="all-target" type="number" min="0" class="ctl !py-1.5 w-20" value="30">
         <button class="btn btn-pri" onclick="setAllTargets()" title="Set this target for every user">Apply to all</button></div>
     </div>
     <div class="overflow-x-auto"><table class="w-full text-left text-xs">
-      <thead id="today-table-head" class="select-none cursor-pointer"></thead>
+      <thead id="today-table-head" class="select-none"></thead>
       <tbody id="today-activity-body"></tbody></table></div>
   </div>
 </div>
 
 <div id="page-main" class="hidden">
-  <div class="card overflow-hidden">
-    <div class="p-5 border-b" style="border-color:var(--line)"><div class="h-sec">Records explorer</div><div class="sub">Click a column title to sort. Type under a title to filter.</div></div>
+  <div class="card overflow-hidden tbl-card">
+    <div class="card-head"><div class="ttl"><i class="dot"></i><div><div class="h-sec">Records explorer</div><div class="sub">Click a column title to sort. Type under a title to filter.</div></div></div></div>
     <div id="table-wrap" class="overflow-auto max-h-[640px]"><table class="w-full text-left text-xs">
-      <thead id="table-head" class="sticky top-0 z-10 select-none" style="background:var(--card)"></thead>
+      <thead id="table-head" class="sticky top-0 z-10 select-none"></thead>
       <tbody id="table-body"></tbody></table></div>
   </div>
 </div>
@@ -239,9 +300,9 @@ tbody tr:hover{background:rgba(13,148,136,.08)}
 </div>
 
 <div id="ubk" onclick="closeUser()" class="hidden fixed inset-0" style="background:#0007;z-index:60"></div>
-<aside id="upanel" class="fixed top-0 right-0 bottom-0 w-full overflow-y-auto p-5" style="max-width:480px;z-index:70;background:var(--bg);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .3s"></aside>
+<aside id="upanel" class="fixed top-0 right-0 bottom-0 w-full overflow-y-auto p-5" style="max-width:480px;z-index:70;transform:translateX(100%);transition:transform .3s"></aside>
 
-<div id="status-el" class="fixed bottom-2 right-3 z-50 text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-2 transition-opacity duration-500 card">
+<div id="status-el" class="fixed bottom-2 right-3 z-50 text-[11px] font-bold rounded-xl flex items-center gap-2 transition-opacity duration-500 card">
   <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Connecting to server...
 </div>
 
@@ -251,11 +312,7 @@ const targetUrl = 'https://script.google.com/macros/s/AKfycbz0V2hziwVZG0tAS7jXcL
 const DATE_ORDER = 'MDY';
 const MAX_COLUMNS = 7;
 
-/* ---------- FAST START ----------
-   1) If there is no saved copy on this device, the data request starts right now,
-      in parallel with the scripts (it does not wait for Chart.js / Papa).
-   2) Chart.js draws the charts the moment it arrives.
-   3) The Excel library is loaded only when the Excel button is clicked. */
+/* ---------- FAST START ---------- */
 let earlyReq = null;
 try {
   if (!localStorage.getItem('qa-has-cache')) {
@@ -433,7 +490,6 @@ function loadData(silent) {
   if (isLoading) return;
   isLoading = true;
   if (!silent) progress(40, 'Fetching data...');
-  // Use the request that already started at page load (first visit only)
   const req = (!silent && earlyReq) ? earlyReq : fetchT(api('after=')).then(r => r.text());
   earlyReq = null;
   return req.then(text => {
@@ -513,7 +569,6 @@ async function checkForChanges() {
   finally { checking = false; }
 }
 
-// Refresh button: always does a full reload from the sheet and shows visible feedback
 async function manualRefresh() {
   const b = $('refresh-btn'), ico = $('refresh-ico');
   if (b.dataset.busy) return;
@@ -675,7 +730,7 @@ function renderUsers() {
     el.title = formatText(n);
     el.innerHTML = `<span class="av" style="background:${avatarColor(n)}">${esc(initials(formatText(n)))}</span>
       <span class="st flex-1 min-w-0 truncate text-[13px] font-semibold text-slate-200">${esc(formatText(n))}</span>
-      <span class="st text-[11px] font-bold text-slate-500">${userTotals[n]}</span>
+      <span class="st cnt">${userTotals[n]}</span>
       <span class="st tick">✓</span>`;
     el.addEventListener('click', () => {
       selectedUsers.has(n) ? selectedUsers.delete(n) : selectedUsers.add(n);
@@ -775,7 +830,7 @@ function renderInactive() {
   if (!off.length) { box.innerHTML = '<div class="sub text-center py-2 md:col-span-3">Everyone has worked today 🎉</div>'; return; }
   box.innerHTML = off.map(u => {
     const last = lastSeen[u] ? new Date(lastSeen[u]).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'never';
-    return `<div data-user="${esc(u)}" class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer hover:opacity-80" style="border-color:var(--line)">
+    return `<div data-user="${esc(u)}" class="idle-row">
       <span class="av" style="background:${avatarColor(u)}">${esc(initials(formatText(u)))}</span>
       <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${esc(formatText(u))}</div>
       <div class="sub">Last worked: ${last}</div></div>
@@ -842,14 +897,14 @@ function renderKpisAndBoard(c) {
   const names = Object.keys(perUser).sort((a, b) => perUser[b] - perUser[a]);
   if (!names.length) lb.innerHTML = '<div class="sub text-center py-4 md:col-span-2">No users match the current filters.</div>';
   const max = names.length ? perUser[names[0]] : 1;
-  const medal = ['#f59e0b', '#94a3b8', '#b45309'];
+  const medal = ['linear-gradient(135deg,#fbbf24,#f59e0b)', 'linear-gradient(135deg,#cbd5e1,#94a3b8)', 'linear-gradient(135deg,#d97706,#b45309)'];
   names.forEach((u, i) => {
     const d = document.createElement('div');
-    d.className = 'flex items-center gap-3 p-3 rounded-xl border';
-    d.style.borderColor = 'var(--line)';
-    d.innerHTML = `<div class="w-8 h-8 rounded-lg grid place-items-center text-xs font-extrabold flex-shrink-0 text-white" style="background:${medal[i] || '#64748b66'}">${i + 1}</div>
+    d.className = 'lb-row' + (i < 3 ? ' top' : '');
+    d.innerHTML = `<div class="rank" style="background:${medal[i] || 'rgba(100,116,139,.45)'}">${i + 1}</div>
+      <span class="av" style="background:${avatarColor(u)}">${esc(initials(fmt(u)))}</span>
       <div class="flex-1 min-w-0"><div class="flex justify-between text-xs mb-1.5"><span data-user="${esc(u)}" class="font-bold truncate cursor-pointer hover:underline" title="Open user page">${esc(fmt(u))}</span><span class="font-extrabold" style="color:var(--acc)">${perUser[u]}</span></div>
-      <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--line)"><div class="h-full rounded-full" style="width:${Math.round(perUser[u] / max * 100)}%;background:linear-gradient(90deg,#0d9488,#4f46e5)"></div></div></div>`;
+      <div class="bar"><i style="width:${Math.round(perUser[u] / max * 100)}%"></i></div></div>`;
     lb.appendChild(d);
   });
 
@@ -870,34 +925,48 @@ function renderKpisAndBoard(c) {
   $('today-activity-body').innerHTML = items.length ? items.map((it, i) => {
     const tg = getTarget(it.raw), col = pctColor(it.pct);
     return `<tr><td class="font-bold opacity-40">${i + 1}</td>
-      <td class="font-semibold">${esc(it.user)}</td>
+      <td><div class="flex items-center gap-2.5"><span class="av" style="width:28px;height:28px;border-radius:9px;font-size:10px;background:${avatarColor(it.raw)}">${esc(initials(it.user))}</span><span class="font-semibold">${esc(it.user)}</span></div></td>
 <td>${Object.keys(it.tasks).map(t => `<span class="chip">${esc(t)}</span>`).join(' ')}</td>
 <td class="text-right font-extrabold" style="color:var(--acc)">${it.count}</td>
       <td><input type="number" min="0" data-u="${esc(it.raw)}" value="${tg}" onchange="setTarget(this.dataset.u,this.value)" class="ctl !py-0.5 !px-1.5 !text-[11px] w-16"></td>
-      <td style="min-width:150px">${tg > 0 ? `<div class="flex items-center gap-2"><div class="pb flex-1"><i style="width:${Math.min(100, it.pct)}%;background:${col}"></i></div><b style="color:${col}">${it.pct}%</b></div>` : '<span class="sub">no target</span>'}</td></tr>`;
+      <td style="min-width:160px">${tg > 0 ? `<div class="flex items-center gap-2"><div class="pb flex-1"><i style="width:${Math.min(100, it.pct)}%;background:${col}"></i></div><b style="color:${col}">${it.pct}%</b></div>` : '<span class="sub">no target</span>'}</td></tr>`;
   }).join('') : `<tr><td colspan="6" class="text-center opacity-50 !py-6">No activity recorded today.</td></tr>`;
 }
 
 let lastDark = null;
 function renderCharts(data, c) {
-  if (!headers.length || typeof Chart === 'undefined') return;   // Chart.js not loaded yet: chartLoaded() will redraw
+  if (!headers.length || typeof Chart === 'undefined') return;
   c = c || compute(data);
   const dark = document.documentElement.classList.contains('dark');
-  const tc = dark ? '#8b98b0' : '#64748b', gc = dark ? '#1b2437' : '#e5e9f1';
+  const tc = dark ? '#8b98b0' : '#64748b', gc = dark ? 'rgba(255,255,255,.06)' : 'rgba(15,22,41,.07)';
   if (lastDark !== dark) { Object.values(charts).forEach(ch => ch.destroy()); charts = {}; lastDark = dark; }
+  Chart.defaults.font.family = "'Plus Jakarta Sans',sans-serif";
+  Chart.defaults.font.weight = 600;
   const now = new Date();
-  const opts = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, precision: 0 } }, x: { grid: { display: false }, ticks: { color: tc } } } };
+  const opts = { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { display: false },
+      tooltip: { backgroundColor: dark ? '#0b1120' : '#0f1629', titleColor: '#fff', bodyColor: '#e2e8f0', padding: 11, cornerRadius: 12, displayColors: false, titleFont: { weight: 700 } } },
+    scales: { y: { beginAtZero: true, border: { display: false }, grid: { color: gc, borderDash: [4, 4] }, ticks: { color: tc, precision: 0, padding: 8 } },
+              x: { border: { display: false }, grid: { display: false }, ticks: { color: tc } } } };
+  const grad = (ctx, color, top, bot) => {
+    const a = ctx.chart.chartArea; if (!a) return color + '33';
+    const g = ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+    g.addColorStop(0, color + top); g.addColorStop(1, color + bot); return g;
+  };
   const make = (id, type, labels, values, color) => {
     const ch = charts[id];
     if (ch) { ch.data.labels = labels; ch.data.datasets[0].data = values; ch.update('none'); return; }
-    charts[id] = new Chart($(id).getContext('2d'), { type, data: { labels, datasets: [{ data: values, borderColor: color, backgroundColor: type === 'bar' ? color + 'cc' : color + '22',
-      fill: true, tension: .35, borderWidth: 2.5, pointRadius: 3, borderRadius: 6 }] }, options: opts });
+    const isBar = type === 'bar';
+    charts[id] = new Chart($(id).getContext('2d'), { type, data: { labels, datasets: [{ data: values, borderColor: color,
+      backgroundColor: ctx => isBar ? grad(ctx, color, 'ff', '66') : grad(ctx, color, '55', '05'),
+      fill: true, tension: .4, borderWidth: isBar ? 0 : 3, pointRadius: 0, pointHoverRadius: 6,
+      pointBackgroundColor: '#fff', pointBorderColor: color, pointBorderWidth: 2.5,
+      borderRadius: 9, borderSkipped: false, maxBarThickness: 38 }] }, options: opts });
   };
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const week = [...Array(7)].map((_, i) => new Date(now.getTime() - (6 - i) * 864e5).toLocaleDateString('en-US', { weekday: 'short' }));
   const tc2 = {}; data.forEach(r => { const t = meta(r).t; if (t) { const f = fmt(t); tc2[f] = (tc2[f] || 0) + 1; } });
-  make('yearlyChart', 'line', months, c.months, '#f59e0b');
+  make('yearlyChart', 'bar', months, c.months, '#f59e0b');
   make('monthlyChart', 'line', c.days.map((_, i) => i + 1), c.days, '#4f46e5');
   make('weeklyChart', 'line', week, c.week, '#8b5cf6');
   make('taskChart', 'bar', Object.keys(tc2).length ? Object.keys(tc2) : ['No tasks'], Object.keys(tc2).length ? Object.values(tc2) : [0], '#0d9488');
@@ -955,14 +1024,14 @@ function renderUserPanel() {
     const v = s.dayMap[d.getTime()] || 0; labels.push(d.getDate() + '/' + (d.getMonth() + 1)); values.push(v); if (v > best) best = v;
   }
   const avg = days ? (s.range / days).toFixed(1) : 0;
-  const kp = (l, v) => `<div class="card p-3"><div class="sub">${l}</div><div class="text-xl font-extrabold mt-1">${v}</div></div>`;
+  const kp = (l, v) => `<div class="card p-3.5"><div class="sub">${l}</div><div class="text-2xl font-extrabold mt-1">${v}</div></div>`;
   const tasks = Object.entries(s.tasks).sort((x, y) => y[1] - x[1]), tmax = tasks.length ? tasks[0][1] : 1;
   const keep = upanel.scrollTop;
   const rb = (k, l) => `<button class="${uRange === k ? 'on' : ''}" onclick="setURange('${k}')">${l}</button>`;
 
   upanel.innerHTML = `
   <div class="flex items-center gap-3 mb-4">
-    <span class="av" style="width:44px;height:44px;font-size:15px;background:${avatarColor(u)}">${esc(initials(formatText(u)))}</span>
+    <span class="av" style="width:48px;height:48px;font-size:16px;border-radius:15px;background:${avatarColor(u)}">${esc(initials(formatText(u)))}</span>
     <div class="flex-1 min-w-0"><div class="text-lg font-extrabold truncate">${esc(formatText(u))}</div><div class="sub">${s.total} cases in total</div></div>
     <button class="btn" onclick="closeUser()">✕</button>
   </div>
@@ -982,16 +1051,16 @@ function renderUserPanel() {
   <div class="card p-4">
     <div class="h-sec mb-3">Tasks (selected period)</div>
     ${tasks.length ? tasks.map(([t, n]) => `<div class="mb-3"><div class="flex justify-between text-xs mb-1"><span class="font-bold truncate">${esc(t)}</span><span class="font-extrabold" style="color:var(--acc)">${n}</span></div>
-      <div class="pb"><i style="width:${Math.round(n / tmax * 100)}%;background:linear-gradient(90deg,#0d9488,#4f46e5)"></i></div></div>`).join('') : '<div class="sub">No cases in this period.</div>'}
+      <div class="bar"><i style="width:${Math.round(n / tmax * 100)}%"></i></div></div>`).join('') : '<div class="sub">No cases in this period.</div>'}
   </div>`;
   upanel.scrollTop = keep;
 
   if (uChart) { uChart.destroy(); uChart = null; }
   if (typeof Chart === 'undefined') return;
-  const dark = document.documentElement.classList.contains('dark'), tc = dark ? '#8b98b0' : '#64748b', gc = dark ? '#1b2437' : '#e5e9f1';
-  uChart = new Chart($('uChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ data: values, backgroundColor: '#0d9488cc', borderRadius: 5 }] },
-    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, precision: 0 } }, x: { grid: { display: false }, ticks: { color: tc, maxRotation: 0, autoSkip: true } } } } });
+  const dark = document.documentElement.classList.contains('dark'), tc = dark ? '#8b98b0' : '#64748b', gc = dark ? 'rgba(255,255,255,.06)' : 'rgba(15,22,41,.07)';
+  uChart = new Chart($('uChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ data: values, backgroundColor: '#0d9488cc', borderRadius: 7, borderSkipped: false }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false }, tooltip: { cornerRadius: 12, padding: 10, displayColors: false } },
+      scales: { y: { beginAtZero: true, border: { display: false }, grid: { color: gc, borderDash: [4, 4] }, ticks: { color: tc, precision: 0 } }, x: { border: { display: false }, grid: { display: false }, ticks: { color: tc, maxRotation: 0, autoSkip: true } } } } });
 }
 
 /* ---------- Export ---------- */
@@ -1003,7 +1072,7 @@ function exportCSV() {
 }
 async function exportExcel() {
   if (!filteredData.length) return alert('No data to export!');
-  if (typeof XLSX === 'undefined') {   // the Excel library is loaded only now, on demand
+  if (typeof XLSX === 'undefined') {
     try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'); }
     catch (e) { return alert('Could not load the Excel library'); }
   }
@@ -1051,7 +1120,6 @@ async function start() {
     startLiveWatch();
   }
 }
-// This script sits at the end of <body>, so the DOM is already ready: start immediately
 start();
 </script>
 </body>
