@@ -96,11 +96,11 @@ header{background:var(--glass)!important;-webkit-backdrop-filter:var(--blur);bac
 .menu-btn.open:hover span:nth-child(3){transform:translateY(-7.5px) rotate(-135deg)}
 
 /* SIDEBAR */
-#sidebar{width:290px;min-width:290px;color:#cbd5e1;transition:width .3s,min-width .3s;
+#sidebar{position:fixed;top:0;left:0;bottom:0;height:100dvh;width:290px;min-width:290px;transform:translateX(-100%);z-index:40;color:#cbd5e1;transition:transform .3s;
   background:linear-gradient(180deg,rgba(9,14,28,.9),rgba(9,14,28,.78));
   -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border-right:1px solid rgba(255,255,255,.07)}
-#sidebar.collapsed{width:78px;min-width:78px}
-#sidebar.collapsed .st{display:none!important}
+#sidebar.mobile-open{transform:none;box-shadow:24px 0 60px -20px rgba(0,0,0,.5)}
+#sbk.open{display:block;position:fixed;inset:0;background:#0008;z-index:30}
 .logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;background:var(--grad);box-shadow:0 10px 24px -8px #0d9488cc,inset 0 1px 0 rgba(255,255,255,.35)}
 .side-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b}
 .navb{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border-radius:14px;font-size:13px;font-weight:700;color:#94a3b8;transition:.15s}
@@ -120,20 +120,6 @@ header{background:var(--glass)!important;-webkit-backdrop-filter:var(--blur);bac
 .side-foot{padding:11px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07)}
 #u-search{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);transition:.15s}
 #u-search:focus{border-color:#2dd4bf88;background:rgba(255,255,255,.09)}
-
-/* COLLAPSED SIDEBAR: ICON RAIL (desktop) */
-@media (min-width:769px){
-  #sidebar.collapsed{width:76px;min-width:76px;padding:16px 10px;align-items:center;gap:18px}
-  #sidebar.collapsed nav,#sidebar.collapsed #ulist{width:100%}
-  #sidebar.collapsed .side-foot{display:none}
-  #sidebar.collapsed .navb{justify-content:center;padding:12px 0;border-radius:16px}
-  #sidebar.collapsed .navb.on::before{content:"";position:absolute;left:-10px;top:22%;bottom:22%;width:4px;border-radius:0 4px 4px 0;background:#2dd4bf}
-  #sidebar.collapsed #ulist{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}
-  #sidebar.collapsed .uitem{padding:0;border:0;background:none;justify-content:center;width:100%}
-  #sidebar.collapsed .uitem .av{width:40px;height:40px;border-radius:14px;font-size:12px;opacity:.5;filter:saturate(.7);transition:.2s}
-  #sidebar.collapsed .uitem:hover .av{opacity:1;filter:none;transform:scale(1.06)}
-  #sidebar.collapsed .uitem.sel .av{opacity:1;filter:none;box-shadow:0 0 0 2px #0b1120,0 0 0 4px #2dd4bf,0 8px 18px -6px #2dd4bf99}
-}
 
 /* KPI */
 .kpi{padding:18px 20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden}
@@ -186,8 +172,8 @@ body.loading .kpi b{-webkit-background-clip:border-box;background-clip:border-bo
 body.loading .h-64 canvas{visibility:hidden}
 
 /* MOBILE FILTERS SHEET */
-.m-only{display:none}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:100;max-height:85dvh;overflow-y:auto;padding:10px 18px 22px;
+.m-only{display:inline-flex}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;z-index:100;max-height:85dvh;overflow-y:auto;padding:10px 18px 22px;
   border-radius:26px 26px 0 0;background:var(--glass-strong);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
   border:1px solid var(--glass-line);box-shadow:0 -20px 50px -20px rgba(0,0,0,.45);
   transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
@@ -202,11 +188,6 @@ body.loading .h-64 canvas{visibility:hidden}
 
 /* RESPONSIVE */
 @media (max-width:768px){
-  .m-only{display:inline-flex}
-  #sidebar{position:fixed;top:0;left:0;bottom:0;height:100dvh;width:280px!important;min-width:280px!important;transform:translateX(-100%);transition:transform .3s;z-index:40}
-  #sidebar.mobile-open{transform:none}
-  #sidebar.collapsed .st{display:revert!important}
-  #sbk.open{display:block;position:fixed;inset:0;background:#0008;z-index:30}
   header{flex-direction:row;align-items:center!important;height:auto!important;min-height:64px!important;padding:10px 12px!important}
   .frow{flex-wrap:nowrap!important;overflow-x:auto;padding-bottom:4px}.frow>*{flex-shrink:0}
   .tools{flex-wrap:nowrap}
@@ -219,7 +200,6 @@ body.loading .h-64 canvas{visibility:hidden}
   .card{background:var(--glass-strong)}
   body::before,body::after{animation:none;filter:blur(60px)}
 }
-@media (min-width:769px){.sheet,#sheet-bk{display:none!important}}
 @media (prefers-reduced-motion:reduce){body::before,body::after{animation:none}.card,.btn,.lb-row{transition:none}}
 @media print{#sidebar,header,#status-el,#upanel,#ubk{display:none!important}body{overflow:visible;height:auto}}
 </style>
@@ -234,7 +214,8 @@ body.loading .h-64 canvas{visibility:hidden}
 <aside id="sidebar" class="flex flex-col p-4 gap-5 h-full z-20">
   <div class="flex items-center gap-3 px-1">
     <div class="logo flex-shrink-0">QA</div>
-    <div class="st"><div class="text-sm font-extrabold text-white">AppSheet QA</div><div class="text-[11px] text-slate-400">Quality control hub</div></div>
+    <div class="st flex-1"><div class="text-sm font-extrabold text-white">AppSheet QA</div><div class="text-[11px] text-slate-400">Quality control hub</div></div>
+    <button class="mini" onclick="closeMobile()" title="Close" aria-label="Close menu">✕</button>
   </div>
 
   <nav class="space-y-1.5">
@@ -265,7 +246,7 @@ body.loading .h-64 canvas{visibility:hidden}
 <main class="flex-1 flex flex-col h-full overflow-hidden min-w-0">
 <header class="min-h-[76px] px-6 py-3 flex items-center justify-between gap-4 z-10 border-b">
   <div class="frow flex items-center gap-2.5 flex-wrap">
-    <button id="menu-btn" class="menu-btn open" onclick="toggleSidebar()" title="Menu" aria-label="Toggle sidebar"><span></span><span></span><span></span></button>
+    <button id="menu-btn" class="menu-btn" onclick="toggleSidebar()" title="Menu" aria-label="Toggle sidebar"><span></span><span></span><span></span></button>
     <button class="btn m-only" onclick="openSheet()">Filters <span id="f-badge" class="chip" style="display:none">0</span></button>
     <div class="tools frow">
       <div class="seg" id="presets">
@@ -422,19 +403,13 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 /* ---------- Helpers ---------- */
 const isMobile = () => innerWidth <= 768;
 
-function syncMenuBtn() {
-  const open = isMobile() ? sidebar.classList.contains('mobile-open') : !sidebar.classList.contains('collapsed');
-  menuBtn.classList.toggle('open', open);
-}
+function syncMenuBtn() { menuBtn.classList.toggle('open', sidebar.classList.contains('mobile-open')); }
 function toggleSidebar() {
-  if (isMobile()) {
-    const open = sidebar.classList.toggle('mobile-open');
-    sbk.classList.toggle('open', open);
-  } else sidebar.classList.toggle('collapsed');
+  const open = sidebar.classList.toggle('mobile-open');
+  sbk.classList.toggle('open', open);
   syncMenuBtn();
 }
 function closeMobile() { sidebar.classList.remove('mobile-open'); sbk.classList.remove('open'); syncMenuBtn(); }
-addEventListener('resize', () => { if (!isMobile()) closeMobile(); syncMenuBtn(); });
 
 function progress(p, t) { $('pbar').style.width = p + '%'; $('ppct').innerText = p + '%'; $('ptext').innerText = t; }
 const formatText = t => t ? t.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
@@ -531,7 +506,7 @@ function hideSkeleton() {
 /* ---------- Navigation ---------- */
 function switchPage(p) {
   try { localStorage.setItem('qa-page', p); } catch (e) {}
-  if (isMobile()) closeMobile();
+  closeMobile();
   $('page-dashboard').classList.toggle('hidden', p !== 'dashboard');
   $('page-main').classList.toggle('hidden', p !== 'main');
   $('nav-dashboard').classList.toggle('on', p === 'dashboard');
@@ -558,19 +533,17 @@ function toggleMenu(btn, menu, right) {
 }
 taskBtn.addEventListener('click', e => { e.stopPropagation(); toggleMenu(taskBtn, taskMenu, false); });
 exportBtn.addEventListener('click', e => { e.stopPropagation(); toggleMenu(exportBtn, exportMenu, true); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 document.addEventListener('click', e => { if (!taskMenu.contains(e.target) && !exportMenu.contains(e.target)) closeMenus(); });
 addEventListener('resize', closeMenus);
 document.querySelectorAll('.frow').forEach(f => f.addEventListener('scroll', closeMenus));
 
 /* ---------- Filters bottom sheet (mobile) ---------- */
-const tools = document.querySelector('.tools'), toolsHome = tools.parentNode, toolsNext = tools.nextSibling;
+const tools = document.querySelector('.tools');
 function openSheet() { $('sheet-bk').classList.remove('hidden'); $('sheet').classList.add('open'); }
 function closeSheet() { $('sheet-bk').classList.add('hidden'); $('sheet').classList.remove('open'); closeMenus(); }
-function placeTools() {
-  if (isMobile()) { if (tools.parentNode !== $('sheet-body')) $('sheet-body').appendChild(tools); }
-  else { if (tools.parentNode !== toolsHome) toolsHome.insertBefore(tools, toolsNext); closeSheet(); }
-}
-addEventListener('resize', placeTools); placeTools();
+function placeTools() { $('sheet-body').appendChild(tools); }
+placeTools();
 
 function markPreset(p) { document.querySelectorAll('#presets button').forEach(b => b.classList.toggle('on', b.dataset.p === p)); }
 function setPreset(p) {
@@ -1100,7 +1073,7 @@ const upanel = $('upanel'), ubk = $('ubk');
 function openUser(u) { curUser = u; uRange = '30'; renderUserPanel(); ubk.classList.remove('hidden'); upanel.style.transform = 'none'; }
 function closeUser() { curUser = null; upanel.style.transform = 'translateX(100%)'; ubk.classList.add('hidden'); if (uChart) { uChart.destroy(); uChart = null; } }
 document.addEventListener('click', e => { const el = e.target.closest('[data-user]'); if (el) openUser(el.dataset.user); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && curUser) closeUser(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (curUser) closeUser(); else closeMobile(); } });
 
 function setURange(r) { uRange = r; renderUserPanel(); }
 function setUCustom() { uFrom = $('u-from').value; uTo = $('u-to').value; uRange = 'custom'; renderUserPanel(); }
@@ -1212,7 +1185,6 @@ async function start() {
   showSkeleton();
   restoreUI();
   loadTargets();
-  if (innerWidth > 768 && innerWidth < 1100) sidebar.classList.add('collapsed');
   syncMenuBtn();
   const c = await cacheGet();
   if (c && c.data && c.data.length) {
