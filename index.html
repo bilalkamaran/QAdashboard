@@ -362,7 +362,7 @@ body.loading .h-64 canvas{visibility:hidden}
 </div>
 
 <script>
-const targetUrl = 'https://script.google.com/macros/s/AKfycbxS-Tsq0SVTlZ3YyhIlbDjT3QYwoJF6bvWtX1YfvcgT3Wlgm6VARYRmMGVjiXQeoGRI/exec';
+const targetUrl = 'https://script.google.com/macros/s/AKfycbw_mGe2-LfoHR5xgdwvxd9FhI64w1sADKff1RovFLkTeuCak5kh7Lb_9QvLTtb-3aDo/exec';
 // 'MDY' => 10/4/2026 is October 4  |  'DMY' => 10/4/2026 is 10 April
 const DATE_ORDER = 'MDY';
 const MAX_COLUMNS = 7;
@@ -603,7 +603,7 @@ function loadData(silent) {
       progress(100, 'Failed'); return;
     }
     if (Array.isArray(j)) data = j;
-    else if (j.added && typeof j.added === 'object') { sheetMode = true; lastSig = j.sig; data = flattenSheets(j.added); }
+    else if (j.added && typeof j.added === 'object') { sheetMode = true; lastSig = j.sig; if (j.hash) lastHash = j.hash; data = flattenSheets(j.added); }
     else if (Array.isArray(j.data)) data = j.data;
     else { data = []; sheetMode = true; data = flattenSheets(j); }
   } catch (e) { data = Papa.parse(text, { header: true, skipEmptyLines: true }).data; }
@@ -645,7 +645,7 @@ const stamp = () => { $('ptext').innerText = 'Updated ' + new Date().toLocaleTim
 
 /* ---------- Live updates ---------- */
 const LIVE_CHECK_MS = 1500;
-let lastSig = null;
+let lastSig = null, lastHash = '';
 
 const api = q => targetUrl + (targetUrl.includes('?') ? '&' : '?') + q + '&t=' + Date.now();
 const sigMap = s => { const m = {}; (s || '').split('|').forEach(x => { if (!x) return; const i = x.lastIndexOf(':'); m[x.slice(0, i)] = +x.slice(i + 1) || 0; }); return m; };
@@ -679,7 +679,7 @@ async function fetchAdded() {
     if (!j || !j.added) return;
     const before = sigMap(lastSig), now = sigMap(j.sig);
     if (Object.keys(before).some(k => !(k in now) || now[k] < before[k])) { isLoading = false; await loadData(true); return; }
-    lastSig = j.sig;
+    lastSig = j.sig; if (j.hash) lastHash = j.hash;
     const rows = flattenSheets(j.added);
     if (rows.length) applyAdded(rows);
   } finally { isLoading = false; }
@@ -721,14 +721,19 @@ function applyAdded(rows) {
   renderUsers(); filterAndRender(); stamp(); notifyNew(rows);
 }
 
+async function checkHash() {
+  if (document.hidden || isLoading || !rawData.length) return;
+  try {
+    const j = await (await fetchT(api('hash=1'), 20000)).json();
+    if (j && j.hash !== undefined && j.hash !== lastHash) await loadData(true);
+  } catch (e) { console.error(e); }
+}
+
 function startLiveWatch() {
   clearInterval(refreshTimer);
   refreshTimer = setInterval(checkForChanges, LIVE_CHECK_MS);
-  // Every 30s silently fetch the full data so EDITED cells appear without refresh
-  setInterval(() => { if (!document.hidden && !isLoading && !checking) loadData(true); }, 30000);
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) { checkForChanges(); if (!isLoading) loadData(true); }
-  });
+  setInterval(checkHash, 15000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkForChanges(); checkHash(); } });
   window.addEventListener('focus', checkForChanges);
 }
   
@@ -1171,7 +1176,7 @@ const cacheGet = async () => { try { const db = await idb(); return await new Pr
 const saveCache = debounce(async () => {
   if (!rawData.length) return;
   try { localStorage.setItem('qa-has-cache', '1'); } catch (e) {}
-  try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').put({ sheetMode, sig: lastSig, data: rawData }, 'data'); } catch (e) {}
+  try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').put({ sheetMode, sig: lastSig, hash: lastHash, data: rawData }, 'data'); } catch (e) {}
 }, 300);
 
 function saveUI() {
@@ -1192,22 +1197,20 @@ async function start() {
   syncMenuBtn();
   const c = await cacheGet();
   if (c && c.data && c.data.length) {
-    sheetMode = c.sheetMode; lastSig = c.sig;
+    sheetMode = c.sheetMode; lastSig = c.sig; lastHash = c.hash || '';
     initData(c.data);
     progress(100, 'Saved data, updating...');
     statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Showing saved data, updating...`;
-   startLiveWatch();
-    // Cache is already on screen. Silently fetch FULL data so edited cells show up.
-    lastSig = null;
-    Promise.resolve(loadData(true)).finally(() => {
+    startLiveWatch();
+    checkHash().finally(() => {
       statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none';
     });
-    
   } else {
     loadData(false);
     startLiveWatch();
   }
 }
+start();
 start();
 </script>
 </body>
