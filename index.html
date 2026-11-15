@@ -363,7 +363,7 @@ body.loading .h-64 canvas{visibility:hidden}
 
 <script>
 const targetUrl = 'https://script.google.com/macros/s/AKfycbx0LlPQP2u4MSEfsLw-Yfv7IDLBv6yiu6QSeTqKN_eOMs8v3xChwf-6nvr0aS75uTdJ/exec';
-  const FIREBASE_URL = 'https://qa-appsheet-default-rtdb.firebaseio.com';
+const FIREBASE_URL = 'https://qa-appsheet-default-rtdb.firebaseio.com';
 // 'MDY' => 10/4/2026 is October 4  |  'DMY' => 10/4/2026 is 10 April
 const DATE_ORDER = 'MDY';
 const MAX_COLUMNS = 7;
@@ -394,6 +394,7 @@ let selectedUsers = new Set();
 let columnFilters = {};
 let sortCol = null, sortDir = 'asc', todaySortCol = null, todaySortDir = 'asc';
 let charts = {};
+let rowHashes = {};   // { Sheet: [hash, ...] }  index = sheet row - 1
 
 const $ = id => document.getElementById(id);
 const statusEl = $('status-el'), taskBtn = $('task-btn'), taskMenu = $('task-menu');
@@ -566,12 +567,12 @@ function initData(data) {
   if (sheetMode) {
     const used = new Set(), seen = new Set(); headers = [];
     rawData.forEach(r => { for (const k in r) {
-      if (k === 'Sheet') continue;
+      if (k === 'Sheet' || k === '_row') continue;
       if (r[k] !== '' && r[k] != null) used.add(k);
       if (!seen.has(k)) { seen.add(k); headers.push(k); }
     } });
     headers = headers.filter(k => used.has(k));
-  } else headers = Object.keys(rawData[0]).slice(0, MAX_COLUMNS);
+  } else headers = Object.keys(rawData[0]).filter(k => k !== '_row').slice(0, MAX_COLUMNS);
   dateKeyCache = null;
   taskKey = headers.length > 1 ? headers[1] : headers[0];
   userKey = headers.find(h => /name|user/i.test(h)) || headers[0];
@@ -580,6 +581,8 @@ function initData(data) {
   renderHead();
   filterAndRender();
   document.body.classList.remove('loading');
+  // first time only: remember the per-row hashes so later edits can be detected row by row
+  if (!Object.keys(rowHashes).length) captureHashes().then(() => saveCache());
 }
 
 function fetchT(url, ms = 60000) {
@@ -679,8 +682,15 @@ async function fetchAdded() {
     const j = await (await fetchT(api('after=' + encodeURIComponent(lastSig)))).json();
     if (!j || !j.added) return;
     const before = sigMap(lastSig), now = sigMap(j.sig);
-    if (Object.keys(before).some(k => !(k in now) || now[k] < before[k])) { isLoading = false; await loadData(true); return; }
-    lastSig = j.sig; if (j.hash) lastHash = j.hash;
+    // a tab got shorter or disappeared => rows were deleted: sync row by row (no full reload)
+    if (Object.keys(before).some(k => !(k in now) || now[k] < before[k])) {
+      lastSig = j.sig; isLoading = false;
+      if (!(await syncRows())) await loadData(true);
+      return;
+    }
+    // NOTE: lastHash is NOT updated here on purpose, so a cell edit made at the same
+    // time is still noticed by the next hash check
+    lastSig = j.sig;
     const rows = flattenSheets(j.added);
     if (rows.length) applyAdded(rows);
   } finally { isLoading = false; }
@@ -722,11 +732,74 @@ function applyAdded(rows) {
   renderUsers(); filterAndRender(); stamp(); notifyNew(rows);
 }
 
+/* ---------- Row-level sync (only changed rows are downloaded) ---------- */
+async function captureHashes() {
+  try {
+    const j = await (await fetchT(api('rowhashes=1'), 30000)).json();
+    if (j && j.hashes) { rowHashes = j.hashes; return j.hash; }
+  } catch (e) { console.error(e); }
+  return null;
+}
+
+async function syncRows() {
+  // No saved hashes (or old cached rows without row numbers): take the hashes first,
+  // then let the caller do ONE full reload. After that, everything is row-level.
+  if (!Object.keys(rowHashes).length || rawData.some(r => !r._row)) { await captureHashes(); return false; }
+
+  const j = await (await fetchT(api('rowhashes=1'), 30000)).json();
+  if (!j || !j.hashes) return false;
+
+  const want = [], dead = new Set();
+  Object.keys(j.hashes).forEach(sh => {
+    const nh = j.hashes[sh], oh = rowHashes[sh] || [];
+    nh.forEach((h, i) => { if (h && h !== oh[i]) want.push(sh + ':' + (i + 1)); });
+  });
+  Object.keys(rowHashes).forEach(sh => {
+    const nh = j.hashes[sh] || [];
+    rowHashes[sh].forEach((h, i) => { if (h && !nh[i]) dead.add(sh + ':' + (i + 1)); });
+  });
+
+  if (!want.length && !dead.size) { rowHashes = j.hashes; lastHash = j.hash; stamp(); return true; }
+
+  // download only the changed / new rows (in parallel chunks, to keep the URL short)
+  const got = new Map(), jobs = [];
+  for (let i = 0; i < want.length; i += 150) {
+    const part = want.slice(i, i + 150).join(',');
+    jobs.push(fetchT(api('rows=' + encodeURIComponent(part))).then(r => r.json()).then(r => {
+      if (!r || !r.rows) throw new Error('rows failed');
+      Object.keys(r.rows).forEach(sh => r.rows[sh].forEach(o => got.set(sh + ':' + o._row, Object.assign({}, o, { Sheet: sh }))));
+    }));
+  }
+  await Promise.all(jobs);
+
+  const keep = new Map();
+  rawData.forEach(r => keep.set(r.Sheet + ':' + r._row, r));
+  dead.forEach(k => keep.delete(k));
+  want.forEach(k => got.has(k) ? keep.set(k, got.get(k)) : keep.delete(k)); // not returned = row is empty now
+
+  const order = {}; Object.keys(j.hashes).forEach((s, i) => order[s] = i);
+  rawData = [...keep.values()].sort((a, b) => (order[a.Sheet] - order[b.Sheet]) || (a._row - b._row));
+  rowHashes = j.hashes; lastHash = j.hash;
+
+  const checked = new Set([...document.querySelectorAll('.task-checkbox:checked')].map(c => c.value));
+  userTotals = {}; const tasks = new Set();
+  rawData.forEach(r => {
+    if (r[taskKey]) tasks.add(r[taskKey].toString().trim());
+    const u = r[userKey] ? r[userKey].toString().trim() : '';
+    if (u) userTotals[u] = (userTotals[u] || 0) + 1;
+  });
+  taskMenu.innerHTML = ''; tasks.forEach(t => addTaskOption(t, checked.has(t)));
+  renderUsers(); filterAndRender(); stamp();
+  return true;
+}
+
 async function checkHash() {
   if (document.hidden || isLoading || !rawData.length) return;
   try {
     const j = await (await fetchT(api('hash=1'), 20000)).json();
-    if (j && j.hash !== undefined && j.hash !== lastHash) await loadData(true);
+    if (j && j.hash !== undefined && j.hash !== lastHash) {
+      if (!(await syncRows())) await loadData(true);
+    }
   } catch (e) { console.error(e); }
 }
 function startRealtime() {
@@ -746,7 +819,7 @@ function startLiveWatch() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkForChanges(); checkHash(); } });
   window.addEventListener('focus', checkForChanges);
 }
-  
+
 function applyRefresh(data) {
   // Reuse unchanged row objects so their cached dates/meta are kept (no freeze)
   const old = new Map();
@@ -1174,10 +1247,11 @@ function renderUserPanel() {
 }
 
 /* ---------- Export ---------- */
+const exportRows = () => filteredData.map(r => { const o = Object.assign({}, r); delete o._row; return o; });
 function exportCSV() {
   if (!filteredData.length) return alert('No data to export!');
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([Papa.unparse(filteredData)], { type: 'text/csv;charset=utf-8;' }));
+  a.href = URL.createObjectURL(new Blob([Papa.unparse(exportRows())], { type: 'text/csv;charset=utf-8;' }));
   a.download = 'AppSheet_QA_Export.csv'; a.click();
 }
 async function exportExcel() {
@@ -1187,7 +1261,7 @@ async function exportExcel() {
     catch (e) { return alert('Could not load the Excel library'); }
   }
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredData), 'QA Data');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(exportRows()), 'QA Data');
   XLSX.writeFile(wb, 'AppSheet_QA_Export.xlsx');
 }
 
@@ -1197,7 +1271,7 @@ const cacheGet = async () => { try { const db = await idb(); return await new Pr
 const saveCache = debounce(async () => {
   if (!rawData.length) return;
   try { localStorage.setItem('qa-has-cache', '1'); } catch (e) {}
-  try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').put({ sheetMode, sig: lastSig, hash: lastHash, data: rawData }, 'data'); } catch (e) {}
+  try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').put({ sheetMode, sig: lastSig, hash: lastHash, rowHashes, data: rawData }, 'data'); } catch (e) {}
 }, 300);
 
 function saveUI() {
@@ -1219,11 +1293,13 @@ async function start() {
   const c = await cacheGet();
   if (c && c.data && c.data.length) {
     sheetMode = c.sheetMode; lastSig = c.sig; lastHash = c.hash || '';
+    rowHashes = c.rowHashes || {};
     initData(c.data);
     progress(100, 'Saved data, updating...');
     statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Showing saved data, updating...`;
     startLiveWatch();
-    checkHash().finally(() => {
+    // 1) new rows first  2) then edited / deleted rows (row-level, no full download)
+    Promise.resolve(checkForChanges()).then(checkHash).finally(() => {
       statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none';
     });
   } else {
