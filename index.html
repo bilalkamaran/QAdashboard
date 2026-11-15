@@ -738,7 +738,18 @@ function startLiveWatch() {
 }
   
 function applyRefresh(data) {
-  const fresh = document.hidden ? findNewRows(rawData, data) : [];
+  // Reuse unchanged row objects so their cached dates/meta are kept (no freeze)
+  const old = new Map();
+  rawData.forEach(r => { const k = sig(r); const a = old.get(k); a ? a.push(r) : old.set(k, [r]); });
+  let changed = data.length !== rawData.length;
+  const fresh = [];
+  data = data.map(r => {
+    const a = old.get(sig(r));
+    if (a && a.length) return a.pop();
+    changed = true; fresh.push(r); return r;
+  });
+  if (!changed) { stamp(); return; }
+
   const checked = new Set([...document.querySelectorAll('.task-checkbox:checked')].map(c => c.value));
   rawData = data; userTotals = {};
   const tasks = new Set();
@@ -750,7 +761,7 @@ function applyRefresh(data) {
   taskMenu.innerHTML = '';
   tasks.forEach(t => addTaskOption(t, checked.has(t)));
   renderUsers(); filterAndRender(); stamp();
-  if (fresh.length) notifyNew(fresh);
+  if (document.hidden && fresh.length) notifyNew(fresh);
 }
 
 /* ---------- New case counter (tab title only) ---------- */
