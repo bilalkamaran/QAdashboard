@@ -724,10 +724,14 @@ function applyAdded(rows) {
 function startLiveWatch() {
   clearInterval(refreshTimer);
   refreshTimer = setInterval(checkForChanges, LIVE_CHECK_MS);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForChanges(); });
+  // Every 30s silently fetch the full data so EDITED cells appear without refresh
+  setInterval(() => { if (!document.hidden && !isLoading && !checking) loadData(true); }, 30000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { checkForChanges(); if (!isLoading) loadData(true); }
+  });
   window.addEventListener('focus', checkForChanges);
 }
-
+  
 function applyRefresh(data) {
   const fresh = document.hidden ? findNewRows(rawData, data) : [];
   const checked = new Set([...document.querySelectorAll('.task-checkbox:checked')].map(c => c.value));
@@ -1192,11 +1196,13 @@ async function start() {
     initData(c.data);
     progress(100, 'Saved data, updating...');
     statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Showing saved data, updating...`;
-    startLiveWatch();
-    if (lastSig) syncSaved();
-    else Promise.resolve(loadData(true)).finally(() => {
+   startLiveWatch();
+    // Cache is already on screen. Silently fetch FULL data so edited cells show up.
+    lastSig = null;
+    Promise.resolve(loadData(true)).finally(() => {
       statusEl.style.opacity = '0'; statusEl.style.pointerEvents = 'none';
     });
+    
   } else {
     loadData(false);
     startLiveWatch();
